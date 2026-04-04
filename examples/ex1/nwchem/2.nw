@@ -1,0 +1,67 @@
+Title "half chair 2"
+#nohup mpiexec -np 8 nwchem 2.nw > 2.out &
+echo
+start 2 
+
+memory 10000 mb
+
+permanent_dir ./2
+scratch_dir   /usr/local/nw-scr
+
+geometry
+ C    -0.115150     1.486158     0.091486
+ H    -0.386117     1.945598    -0.870563
+Cl    -0.035777     2.884004     1.230032
+ C     1.260937     0.809586    -0.026905
+ H     1.868625     1.140564     0.826273
+ H     1.763327     1.212710    -0.918681
+ C     1.296396    -0.739727    -0.056349
+ H     2.033142    -1.058153    -0.808833
+ H     1.691934    -1.096920     0.902927
+ C    -0.019638    -1.503743    -0.311766
+Cl    -0.346354    -2.630251     1.077437
+ H     0.086152    -2.180464    -1.169517
+ C    -1.236947    -0.613325    -0.501633
+ H    -1.219139    -0.215413    -1.533315
+ H    -2.149134    -1.220777    -0.415982
+ C    -1.231188     0.540771     0.488457
+ H    -1.071416     0.159497     1.510701
+ H    -2.189651     1.079885     0.486229
+end
+
+basis
+ * library 6-31G
+end
+
+dft
+ xc b3lyp
+end
+
+driver
+ MaxIter 250
+end
+
+task dft saddle ignore
+
+freq
+  temp 1 290 
+end
+
+task dft freq
+
+property
+ aimfile
+ moldenfile
+ molden_norm none
+end
+
+task dft property ignore
+
+mepgs
+  xyz 2.irc
+  OPTTOL 3e-5
+  MAXITER 50
+end
+
+task dft mepgs ignore
+
