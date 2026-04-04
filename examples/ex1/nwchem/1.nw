@@ -1,0 +1,59 @@
+Title "chair 1"
+#nohup mpiexec -np 8 nwchem 1.nw > 1.out &
+echo
+start 1 
+
+memory 10000 mb
+
+permanent_dir ./1
+scratch_dir   /usr/local/nw-scr
+
+geometry
+ C     0.000000     0.000000     0.000000
+ H     0.000000     0.000000     1.109261
+Cl     1.738366     0.000000    -0.456295
+ C    -0.627518     1.262450    -0.573795
+ H    -0.467051     1.320409    -1.671917
+ H    -0.145600     2.170996    -0.161756
+ C    -2.127849     1.269232    -0.253661
+ H    -2.281817     1.372851     0.840271
+ H    -2.600970     2.167111    -0.702914
+ C    -2.814918    -0.000785    -0.737995
+Cl    -2.788570     0.001437    -2.534929
+ H    -3.896950    -0.001794    -0.483032
+ C    -2.127749    -1.272975    -0.259492
+ H    -2.286657    -1.385979     0.833055
+ H    -2.598660    -2.168198    -0.717063
+ C    -0.625822    -1.264730    -0.570945
+ H    -0.462018    -1.326867    -1.668669
+ H    -0.144647    -2.171502    -0.153735
+end
+
+basis
+ * library 6-31G
+end
+
+dft
+ xc b3lyp
+end
+
+driver
+ MaxIter 150
+end
+
+task dft optimize ignore
+
+freq
+  temp 1 290 
+end
+
+task dft freq
+
+property
+ aimfile
+ moldenfile
+ molden_norm none
+end
+
+task dft property ignore
+

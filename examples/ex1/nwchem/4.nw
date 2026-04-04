@@ -1,0 +1,67 @@
+Title "boat 4"
+#nohup mpiexec -np 8 nwchem 4.nw > 4.out &
+echo
+start 4 
+
+memory 10000 mb
+
+permanent_dir ./4
+scratch_dir   /usr/local/nw-scr
+
+geometry
+ C    -0.007584    -1.343253     0.343453
+ H    -0.011182    -1.221206     1.428259
+Cl    -0.016751    -3.246312     0.153967
+ C     1.272648    -0.791955    -0.284327
+ H     1.344065    -1.165765    -1.311318
+ H     2.142513    -1.175906     0.256195
+ C     1.277288     0.778391    -0.293158
+ H     2.155659     1.162363     0.233312
+ H     1.338861     1.141062    -1.324789
+ C     0.007584     1.343253     0.343453
+Cl     0.016751     3.246312     0.153967
+ H     0.011182     1.221206     1.428259
+ C    -1.272648     0.791955    -0.284327
+ H    -2.142513     1.175906     0.256195
+ H    -1.344065     1.165765    -1.311318
+ C    -1.277288    -0.778391    -0.293158
+ H    -1.338861    -1.141062    -1.324789
+ H    -2.155659    -1.162363     0.233312
+end
+
+basis
+ * library 6-31G
+end
+
+dft
+ xc b3lyp
+end
+
+driver
+ MaxIter 350
+end
+
+task dft saddle ignore
+
+freq
+  temp 1 290 
+end
+
+task dft freq
+
+property
+ aimfile
+ moldenfile
+ molden_norm none
+end
+
+task dft property ignore
+
+mepgs
+  xyz 4.irc
+  OPTTOL 3e-7
+  MAXITER 50
+end
+
+task dft mepgs ignore
+

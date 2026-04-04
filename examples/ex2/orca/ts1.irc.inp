@@ -1,0 +1,15 @@
+! IRC PBE0 D3BJ UKS def2-SVP 
+
+%maxcore 1200
+
+%pal
+ nprocs 8
+end
+
+%irc
+    MaxIter 80
+    TolRMSG   5.e-5
+    TolMaxG   2.e-4
+end
+
+* xyzfile 0 1 ts1.opt.xyz

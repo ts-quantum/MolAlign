@@ -1,0 +1,59 @@
+Title "twist 5"
+#nohup mpiexec -np 8 nwchem .nw > .out &
+echo
+start 5 
+
+memory 10000 mb
+
+permanent_dir ./5
+scratch_dir   /usr/local/nw-scr
+
+geometry
+ C     0.336800     1.359200    -0.048600
+ H     1.447600     1.359200    -0.048600
+Cl    -0.101000     3.103500    -0.048600
+ C    -0.226000     0.739400     1.221600
+ H    -1.333400     0.813300     1.229200
+ H     0.111100     1.293700     2.120700
+ C     0.204300    -0.734300     1.321300
+ H     1.126700    -0.827400     1.928400
+ H    -0.568500    -1.297300     1.886000
+ C     0.425600    -1.334500    -0.064000
+Cl     0.118300    -3.102000     0.046000
+ H     1.486400    -1.258900    -0.385100
+ C    -0.519800    -0.765500    -1.111400
+ H    -0.420400    -1.304600    -2.075000
+ H    -1.575000    -0.913000    -0.800400
+ C    -0.235400     0.732500    -1.316600
+ H    -1.174800     1.237200    -1.626800
+ H     0.462300     0.881400    -2.164300
+end
+
+basis
+ * library 6-31G
+end
+
+dft
+ xc b3lyp
+end
+
+driver
+ MaxIter 250
+end
+
+task dft optimize ignore
+
+freq
+  temp 1 290 
+end
+
+task dft freq
+
+property
+ aimfile
+ moldenfile
+ molden_norm none
+end
+
+task dft property ignore
+
