@@ -1157,7 +1157,7 @@ cov_radii = {
 default_radius = 1.0
 
 # Version:
-ver_no = 1.0
+ver_no = 1.1
 
 @click.command(context_settings=dict(ignore_unknown_options=True))
 @click.argument('files', nargs=-1) # 'e.g. file1.xyz file2.xyz ...'
