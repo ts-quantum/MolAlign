@@ -421,40 +421,37 @@ charge =''  # e.g. 0
 mult ='' 	# e.g. 1		
 basis =''   # e.g. def2-SVP
 method =''  # e.g. HF, B3LYP, PBE0 or other XC
-mem = 2000
-nproc = 8
+mem = '2000'
+nproc = '8'
 ### adapt to your specific environment
 ORCA_EXE = "/usr/local/orca_6_1_0/orca"
 ORCA_2MKL = "/usr/local/orca_6_1_0/orca_2mkl"
 # pre-configured by MolAlign
-inp_file = {xyz_filename} 	
+inp_file = '{xyz_filename}.xyz' 	
 
-import os
+import os, sys
 
 def run_split():
-	with open(inp_file, 'r') as f:
-		lines = f.readlines()
-
-	try:
-		num_atoms = int(lines[0].strip())
-	except: 
-		print("Error: Invalid XYZ format.")
-		return
-
-	block_size = num_atoms + 2
-	steps = len(lines) // block_size
-	base = os.path.splitext(inp_file)[0]
-
-	wrapper_name = f"run_{{base}}_batch.sh"
-	with open(wrapper_name, 'w') as w:
-		w.write("#!/bin/bash\n\n")
-		for i in range(steps):
-			label = f"{{base}}_{{i:03d}}"
-			inp = f"{{label}}.inp"
-			out = f"{{label}}.out"
-			xyz_list = lines[i*block_size + 2 : (i+1)*block_size]
-			xyz_body = "".join(xyz_list).rstrip()
-			body = f\"\"\"! {{method}} {{basis}}
+    with open(inp_file, 'r') as f:
+        lines = f.readlines()
+    try:
+        num_atoms = int(lines[0].strip())
+    except:
+        print("Error: Invalid XYZ format.")
+        return
+    block_size = num_atoms + 2
+    steps = len(lines) // block_size
+    base = os.path.splitext(inp_file)[0]
+    wrapper_name = f"run_{{base}}_batch.sh"
+    with open(wrapper_name, 'w') as w:
+        w.write("#!/bin/bash\\n\\n")
+        for i in range(steps):
+            label = f"{{base}}_{{i:03d}}"
+            inp = f"{{label}}.inp"
+            out = f"{{label}}.out"
+            xyz_list = lines[i*block_size + 2 : (i+1)*block_size]
+            xyz_body = "".join(xyz_list).rstrip()
+            body = f\"\"\"! {{method}} {{basis}}
 
 %maxcore {{mem}}
 %pal nprocs {{nproc}} end
@@ -463,27 +460,23 @@ def run_split():
 {{xyz_body}}
 *
 \"\"\"
-			#write input file
-			with open(inp, 'w') as f_inp:
-				f_inp.writelines(body)
+            #write input file
+            with open(inp, 'w') as f_inp:
+                f_inp.writelines(body)
 			# Commands for shell script
-			w.write(f"{{ORCA_EXE}} {{inp}} > {{out}} 2>&1 && \\\\\\n")
-			w.write(f"{{ORCA_2MKL}} {{label}} -molden && \\\\\\n")
-			w.write(f"mv {{label}}.molden.input {{label}}.molden && \\\\\\n")
-			w.write(f"echo 'Frame {{i:03d}} finished.'\\n\\n")
-	os.chmod(wrapper_name, 0o755)
-	print(f"Done. Created {{steps}} inputs and shell script: {{wrapper_name}}")	
+            w.write(f"{{ORCA_EXE}} {{inp}} > {{out}} 2>&1 && \\\\\\n")
+            w.write(f"{{ORCA_2MKL}} {{label}} -molden && \\\\\\n")
+            w.write(f"mv {{label}}.molden.input {{label}}.molden && \\\\\\n")
+            w.write(f"echo 'Frame {{i:03d}} finished.'\\n\\n")
+    os.chmod(wrapper_name, 0o755)
+    print(f"Done. Created {{steps}} inputs and shell script: {{wrapper_name}}")	
 
-if __name__ == "__main__":
-    if not charge or not mult or not basis or not method:
-        print("No method provided")
-        return  
+if __name__ == "__main__": 
     missing = [name for name, val in [("Charge", charge), ("Mult", mult), ("Basis", basis), ("Method", method)] if not str(val)]
     if missing:
         print(f"Error: Input missing: {{', '.join(missing)}}")
         sys.exit()
     run_split()
-
 """
     with open(script_name, 'w', encoding='utf-8') as f:
         f.write(template_content)
@@ -521,33 +514,32 @@ scr_dir = 'scr'
 ### adapt to your specific environment
 nw_cmd = 'mpiexec -np 8 nwchem'
 # pre-configured by MolAlign
-inp_file = {xyz_filename}	
+inp_file = '{xyz_filename}.xyz'	
 
-import os
+import os, sys 
 
 def run_split():
-	with open(inp_file, 'r') as f:
-		lines = f.readlines()
-
-	try:
-		num_atoms = int(lines[0].strip())
-	except: 
-		print("Error: Invalid XYZ format.")
-		return
-
-	block_size = num_atoms + 2
-	steps = len(lines) // block_size
-	base = os.path.splitext(inp_file)[0]
-
-	wrapper_name = f"run_{{base}}_batch.sh"
-	with open(wrapper_name, 'w') as w:
-		w.write("#!/bin/bash\n\n")
-		w.write(f"mkdir -p ./{{work_dir}}\n")
-		w.write(f"mkdir -p ./{{scr_dir}}\n\n")
-		for i in range(steps):
-			xyz_list = lines[i*block_size + 2 : (i+1)*block_size]
-			xyz_body = "".join(xyz_list).rstrip()
-			body = f\"\"\"Title {{base}}_{{i:03d}}
+    with open(inp_file, 'r') as f:
+        lines = f.readlines()
+    try:
+        num_atoms = int(lines[0].strip())
+    except:
+        print("Error: Invalid XYZ format.")
+        return
+    
+    block_size = num_atoms + 2
+    steps = len(lines) // block_size
+    base = os.path.splitext(inp_file)[0]
+    
+    wrapper_name = f"run_{{base}}_batch.sh"
+    with open(wrapper_name, 'w') as w:
+        w.write("#!/bin/bash\\n\\n")
+        w.write(f"mkdir -p ./{{work_dir}}\\n\\n")
+        w.write(f"mkdir -p ./{{scr_dir}}\\n\\n")
+        for i in range(steps):
+            xyz_list = lines[i*block_size + 2 : (i+1)*block_size]
+            xyz_body = "".join(xyz_list).rstrip()
+            body = f\"\"\"Title {{base}}_{{i:03d}}
 echo
 start {{base}}_{{i:03d}} 
 
@@ -578,15 +570,15 @@ end
 
 task {{method_type}} property ignore 
 \"\"\"
-			inp = f"{{base}}_{{i:03d}}.nw"
-			out = f"{{base}}_{{i:03d}}.out"
-			with open(inp, 'w') as f_inp:
-				f_inp.writelines(body)
-			w.write(f"{{nw_cmd}} {{inp}} > {{out}} 2>&1 && \\\n" )
-			w.write(f"mv ./{{work_dir}}/{{base}}_{{i:03d}}.molden ./ 2>/dev/null && \\\n")
-			w.write(f"echo 'Frame {{i:03d}} finished.'\n\n")
-	os.chmod(wrapper_name, 0o755)
-	print(f"Done. Created {{steps}} inputs and shell script: {{wrapper_name}}")	
+            inp = f"{{base}}_{{i:03d}}.nw"
+            out = f"{{base}}_{{i:03d}}.out"
+            with open(inp, 'w') as f_inp:
+                f_inp.writelines(body)
+            w.write(f"{{nw_cmd}} {{inp}} > {{out}} 2>&1 && \\\n" )
+            w.write(f"mv ./{{work_dir}}/{{base}}_{{i:03d}}.molden ./ 2>/dev/null && \\\n")
+            w.write(f"echo 'Frame {{i:03d}} finished.'\\n\\n")
+    os.chmod(wrapper_name, 0o755)
+    print(f"Done. Created {{steps}} inputs and shell script: {{wrapper_name}}")	
 
 if __name__ == "__main__":
     missing = [name for name, val in [("Charge", charge), ("Basis", basis), ("Method", method_type)] if not str(val)]
@@ -629,9 +621,9 @@ method = '' # e.g. 'scf', 'pbe0', 'b3lyp', ...
 mem = '1000mb'
 nproc = 8
 #pre-configured by MolAlign
-xyz_input = {xyz_filename} 
+xyz_input = '{xyz_filename}.xyz' 
 
-import os
+import os, sys
 import psi4
 psi4.set_memory(mem)
 psi4.core.set_num_threads(nproc)
@@ -671,7 +663,7 @@ def run_split():
 	for i in range(steps):
 		xyz_list = lines[i*block_size + 2 : (i+1)*block_size]
 		xyz_body = "".join(xyz_list)
-		temp_mol = psi4.geometry(f"units angstrom\n{{xyz_body}}")
+		temp_mol = psi4.geometry(f"units angstrom\\n{{xyz_body}}")
 		mol.set_geometry(temp_mol.geometry())
 		#energy calculation
 		if last_wfn is not None:
@@ -1190,7 +1182,6 @@ ver_no = 1.1
               help='Indices of files to reverse, e.g. -r 0 -r 2 will reverse first and third file')
 
 def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
-    
     # Data Import
     all_datasets = []
     log_data = []
@@ -1238,9 +1229,9 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
         
     # Export
     if xyz:
-        log = export_xyz(combined_data, f"{fname}.xyz")
+        log_ = export_xyz(combined_data, f"{fname}.xyz")
         click.echo(f"Trajectory saved as {fname}.xyz")
-        log_data.append(log)
+        log_data.append(log_)
         if split == 'orca':
             try:
                 script_name = create_split_template_orca(fname, ver_no)
