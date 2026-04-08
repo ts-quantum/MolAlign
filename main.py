@@ -1218,9 +1218,9 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
             combined_data = all_datasets[0]
             # No alignment/mapping needed, jump straight to export
     else:  # multiple inputs
-        combined_data, alignment_rmsds, log = chain_alignment(all_datasets)
+        combined_data, alignment_rmsds, log_ = chain_alignment(all_datasets)
         log_data.append("Alignment:")
-        log_data.extend(log)
+        log_data.extend(log_)
 
         if alignment_rmsds:
             avg_rmsd = sum(alignment_rmsds) / len(alignment_rmsds)
