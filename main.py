@@ -409,20 +409,19 @@ def create_split_template_orca(xyz_path, ver_no):
     work_dir = os.path.dirname(xyz_path)
     xyz_filename = os.path.basename(xyz_path)
     # Name des Hilfsskripts basierend auf der XYZ-Datei
-    script_name = os.path.join(work_dir, f"{os.path.splitext(xyz_filename)[0]}_split_orca.py")
+    script_name = os.path.join(work_dir, f"{os.path.splitext(xyz_filename)[0]}_split.py")
 
     # Das Template als String (mit Platzhaltern)
-    template_content = f"""import os
+    template_content = f"""# --- CONFIGURATION: ADJUST BEFORE RUNNING ---
 ##### created by MolAlign {ver_no} (C) 2026 by Dr. Tobias Schulz
 ##### This Python Script will create a series of ORCA Input files from 
 ##### a given IRC Trajectory along with a "run_{os.path.splitext(xyz_filename)[0]}_batch.sh" script
-##### User section:
-### method details (examples, adapt to your case)
-charge = 0	
-mult = 1			
-basis = '6-31G'
-method = 'HF' # for DFT, e.g. 'B3LYP', 'PBE0' or other XC
-mem = 2048
+### Edit method, basis set, etc. here
+charge =''  # e.g. 0	
+mult ='' 	# e.g. 1		
+basis =''   # e.g. def2-SVP
+method =''  # e.g. HF, B3LYP, PBE0 or other XC
+mem = 2000
 nproc = 8
 ### adapt to your specific environment
 ORCA_EXE = "/usr/local/orca_6_1_0/orca"
@@ -476,7 +475,13 @@ def run_split():
 	print(f"Done. Created {{steps}} inputs and shell script: {{wrapper_name}}")	
 
 if __name__ == "__main__":
-
+    if not charge or not mult or not basis or not method:
+        print("No method provided")
+        return  
+    missing = [name for name, val in [("Charge", charge), ("Mult", mult), ("Basis", basis), ("Method", method)] if not str(val)]
+    if missing:
+        print(f"Error: Input missing: {{', '.join(missing)}}")
+        sys.exit()
     run_split()
 
 """
@@ -495,20 +500,20 @@ def create_split_template_nw(xyz_path, ver_no):
     work_dir = os.path.dirname(xyz_path)
     xyz_filename = os.path.basename(xyz_path)
     # Name des Hilfsskripts basierend auf der XYZ-Datei
-    script_name = os.path.join(work_dir, f"{os.path.splitext(xyz_filename)[0]}_split_nw.py")
+    script_name = os.path.join(work_dir, f"{os.path.splitext(xyz_filename)[0]}_split.py")
 
     # Das Template als String (mit Platzhaltern)
-    template_content = f"""##### created by MolAlign {ver_no} (C) 2026 by Dr. Tobias Schulz
+    template_content = f"""# --- CONFIGURATION: ADJUST BEFORE RUNNING ---
+##### created by MolAlign {ver_no} (C) 2026 by Dr. Tobias Schulz
 ##### This Python Script will create a series of NWChem Input files from 
 ##### a given IRC Trajectory along with a "run_{os.path.splitext(xyz_filename)[0]}_batch.sh" script
-##### User section:
-### method details (examples, adapt to your case)
-charge = 0				
-basis = '6-31G'
-method_type = 'dft' # or 'scf' for HF
+### Edit method, basis set, etc. here
+charge = ''	# e.g. 0			
+basis = '' # e.g. '6-31G'
+method_type = '' # or 'scf' or 'dft'
 method_details =\"\"\"
- xc b3lyp
- mult 1
+ xc b3lyp # !!
+ mult 1   # !!
 \"\"\"
 ### directories will be created by the "run_{os.path.splitext(xyz_filename)[0]}_batch.sh" script
 work_dir = 'calc'
@@ -584,7 +589,10 @@ task {{method_type}} property ignore
 	print(f"Done. Created {{steps}} inputs and shell script: {{wrapper_name}}")	
 
 if __name__ == "__main__":
-
+    missing = [name for name, val in [("Charge", charge), ("Basis", basis), ("Method", method_type)] if not str(val)]
+    if missing:
+        print(f"Error: Input missing: {{', '.join(missing)}}")
+        sys.exit()
     run_split()
 
 """
@@ -603,22 +611,21 @@ def create_split_template_psi4(xyz_path, ver_no):
     work_dir = os.path.dirname(xyz_path)
     xyz_filename = os.path.basename(xyz_path)
     # Name des Hilfsskripts basierend auf der XYZ-Datei
-    script_name = os.path.join(work_dir, f"{os.path.splitext(xyz_filename)[0]}_split_psi.py")
+    script_name = os.path.join(work_dir, f"{os.path.splitext(xyz_filename)[0]}_split.py")
 
     # Das Template als String (mit Platzhaltern)
-    template_content = f"""
+    template_content = f"""# --- CONFIGURATION: ADJUST BEFORE RUNNING ---
 ##### created by MolAlign {ver_no} (C) 2026 by Dr. Tobias Schulz
 ##### This Python Script to run a Psi-4 single point calculation
 ##### for each point on a given IRC Trajectory and to produce a 
 ##### .molden and .fchk file for each point
 ##### must be run inside a Psi-Conda environment
-##### User section:
-### method details (examples, adapt to your case)
-charge = 0
-mult = 1
-basis = 'cc-pVDZ'
-ref = 'rhf'  # or 'rks', 'uhf', 'uks', ...
-method = 'scf' # for dft: e.g. 'pbe0', 'b3lyp', ...
+### Edit method, basis set, etc. here
+charge = '' # e.g. 0
+mult = '' # e.g. 1
+basis = '' # e.g. 'cc-pVDZ'
+ref = ''  # e.g. 'rhf', 'rks', 'uhf', 'uks', ...
+method = '' # e.g. 'scf', 'pbe0', 'b3lyp', ...
 mem = '1000mb'
 nproc = 8
 #pre-configured by MolAlign
@@ -679,6 +686,10 @@ def run_split():
 		psi4.core.clean()
 	
 if __name__ == "__main__":
+    missing = [name for name, val in [("Charge", charge), ("Mult", mult), ("Basis", basis), ("Ref", ref), ("Method", method)] if not str(val)]
+    if missing:
+        print(f"Error: Input missing: {{', '.join(missing)}}")
+        sys.exit()
     run_split()
 """
     with open(script_name, 'w', encoding='utf-8') as f:
