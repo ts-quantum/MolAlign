@@ -417,10 +417,10 @@ def create_split_template_orca(xyz_path, ver_no):
 ##### This Python Script will create a series of ORCA Input files from 
 ##### a given IRC Trajectory along with a "run_{os.path.splitext(xyz_filename)[0]}_batch.sh" script
 ### Edit method, basis set, etc. here
-charge =''  # e.g. 0	
-mult ='' 	# e.g. 1		
-basis =''   # e.g. def2-SVP
-method =''  # e.g. HF, B3LYP, PBE0 or other XC
+charge =''  # e.g. '0'	
+mult ='' 	# e.g. '1'		
+basis =''   # e.g. 'def2-SVP'
+method =''  # e.g. 'HF', 'B3LYP', 'PBE0' or other XC
 mem = '2000'
 nproc = '8'
 ### adapt to your specific environment
@@ -501,12 +501,14 @@ def create_split_template_nw(xyz_path, ver_no):
 ##### This Python Script will create a series of NWChem Input files from 
 ##### a given IRC Trajectory along with a "run_{os.path.splitext(xyz_filename)[0]}_batch.sh" script
 ### Edit method, basis set, etc. here
-charge = ''	# e.g. 0			
+charge = ''	# e.g. '0'	
+mult = '' # e.g. '1'		
 basis = '' # e.g. '6-31G'
 method_type = '' # or 'scf' or 'dft'
-method_details =\"\"\"
- xc b3lyp # !!
- mult 1   # !!
+dft_method = '' # e.g. 'xc b3lyp'
+method_details =f\"\"\"
+ {{dft_method}}
+ mult {{mult}}   
 \"\"\"
 ### directories will be created by the "run_{os.path.splitext(xyz_filename)[0]}_batch.sh" script
 work_dir = 'calc'
@@ -574,8 +576,9 @@ task {{method_type}} property ignore
             out = f"{{base}}_{{i:03d}}.out"
             with open(inp, 'w') as f_inp:
                 f_inp.writelines(body)
-            w.write(f"{{nw_cmd}} {{inp}} > {{out}} 2>&1 && \\\n" )
-            w.write(f"mv ./{{work_dir}}/{{base}}_{{i:03d}}.molden ./ 2>/dev/null && \\\n")
+            
+            w.write(f"{{nw_cmd}} {{inp}} > {{out}} 2>&1 && \\\\\\n" )
+            w.write(f"mv ./{{work_dir}}/{{base}}_{{i:03d}}.molden ./ 2>/dev/null && \\\\\\n")
             w.write(f"echo 'Frame {{i:03d}} finished.'\\n\\n")
     os.chmod(wrapper_name, 0o755)
     print(f"Done. Created {{steps}} inputs and shell script: {{wrapper_name}}")	
@@ -613,8 +616,8 @@ def create_split_template_psi4(xyz_path, ver_no):
 ##### .molden and .fchk file for each point
 ##### must be run inside a Psi-Conda environment
 ### Edit method, basis set, etc. here
-charge = '' # e.g. 0
-mult = '' # e.g. 1
+charge = '' # e.g. '0'
+mult = '' # e.g. '1'
 basis = '' # e.g. 'cc-pVDZ'
 ref = ''  # e.g. 'rhf', 'rks', 'uhf', 'uks', ...
 method = '' # e.g. 'scf', 'pbe0', 'b3lyp', ...
@@ -1314,7 +1317,8 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
         worker.start()
         loop.exec() # block until finished!
 
-        log_data.append(f"Blender multi file export done to {fname}")
+        log_data.append(f"Blender multi file export done to {fname}_*.glb")
+        log_data.append(f"Configure Script {fname}_animate.py created ")
 
     if bld_one:
         click.echo("Bld One File Export startet... ")

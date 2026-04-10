@@ -1,1 +1,1 @@
-python3 ../main.py ts1.irc_IRC_Full_trj.xyz --fname ts1 --log --xyz --split orca
+python3 ../../main.py ts1.irc_IRC_Full_trj.xyz --fname ts1 --log --xyz --split orca
