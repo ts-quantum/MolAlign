@@ -62,13 +62,13 @@ If you are using the Blender export scripts:
 
 6. Examples:
 
-Example 1: 2-Chlorocyclohexane Ring Flip (NWChem Workflow)
+Example 1: 2-Chlorocyclohexane Ring Flip (NWChem Workflow) B3LYP/6-31G, [1]
     Pathway Description:
     This example constructs the complete reaction pathway for the cyclohexane ring flip using NWChem IRC output files.
     The required input geometries and NWChem files are provided in the /nwchem directory.
     Command Line Execution:
     To merge the segments and generate the visualization files, run:
-    python3 ../main.py 2.irc.fxyz 2.irc.bxyz 4.irc.fxyz 4.irc.bxyz 6.irc.fxyz 6.irc.bxyz --xyz --pov -n cyhex --fname Cyhex --log
+    python3 ../../main.py 2.irc.fxyz 2.irc.bxyz 4.irc.fxyz 4.irc.bxyz 6.irc.fxyz 6.irc.bxyz --xyz --pov -n cyhex --fname Cyhex --log
     Parameters Explained:
     --xyz: Generates the combined trajectory file.
     --pov: Creates the POV-Ray include file.
@@ -80,15 +80,17 @@ Example 1: 2-Chlorocyclohexane Ring Flip (NWChem Workflow)
     Cyhex.inc: A POV-Ray include file containing all structures. You can call specific frames in your .pov file using the cyhex array.
     Cyhex.log: Log file documenting the alignment and merging process.
     Visualization: See test1.pov for a ready-to-render setup using the generated include file.
+[1] E. Aprà, D. Mejía-Rodríguez, et al., "NWChem: Recent and Ongoing Developments", J. Chem. Theory Comput., 
+19, 7077–7096 (2023). doi: 10.1021/acs.jctc.3c00421. 
 
-Example 2: Addition of Methyl Carbene to Propene (Splitting for BatchMol)
+Example 2: Addition of Methyl Carbene to Propene (Splitting for BatchMol) PBE0/def2-SVP, [2]
     Pathway Description:
     This example focuses on the radical attack of methyl carbene on propene.
     The required IRC trajectory is provided as ts1.irc_IRC_Full_trj.xyz.
     Command Line Execution:
     To process the trajectory and prepare it for further quantum chemical calculations:
 
-    python3 ../main.py ts1.irc_IRC_Full_trj.xyz --fname ts1 --log --xyz --split orca
+    python3 ../../main.py ts1.irc_IRC_Full_trj.xyz --fname ts1 --log --xyz --split orca
 
     Workflow & Integration:
     Splitting: The --split orca flag generates a dedicated Python script: ts1_split.py.
@@ -100,6 +102,23 @@ Example 2: Addition of Methyl Carbene to Propene (Splitting for BatchMol)
     Result:
     Allows for high-resolution animation of electronic properties, such as tracking the radical center or spin density 
     throughout the entire reaction path.
+[2] F. Neese, "Software update: the ORCA program system — Version 6.0", Wiley Interdiscip. Rev.: Comput. Mol. Sci., 
+15, e70019 (2025). doi: 10.1002/wcms.70019.
+
+Example 3: 1-5-H-Shift (Splitting for BatchMol) B3LYP/cc-pVDZ
+    Pathway Description:
+    This example demonstrates the hydrogen migration between the terminal methyl group and the oxygen 
+    atom of but-2-en-1-one. It includes input and output files for TS optimization and IRC calculations 
+    performed with PSI4.
+    MolAlign was used to generate:
+    irc_split.py: A script to create .molden and .fchk files for BatchMol 
+    (enabling ESP or MO visualization along the pathway).
+    Blender Assets: Individual .glb files for each step of the pathway, 
+    including an irc_animate.py script for automated processing in Blender.
+    POV-Ray Files: An .inc file containing a molecule array over the reaction path, 
+    along with the corresponding input/ini files and the final rendered MP4 video.
+[3] D. G. A. Smith, L. A. Burns, et al., "Psi4 1.4: Open-source software for high-throughput quantum chemistry", 
+J. Chem. Phys., 152, 184108 (2020). doi: 10.1063/5.0006002.
 
 ## Installation
 
