@@ -1,8 +1,5 @@
 # MolAlign 
 import sys, os, re
-base_dir = os.path.dirname(sys.executable)
-if base_dir not in sys.path:
-    sys.path.insert(0, base_dir)
 
 import platform, subprocess, psutil, click
 from tqdm import tqdm
@@ -18,21 +15,6 @@ from PySide6.QtCore import QCoreApplication, QEventLoop
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import as_completed
 
-""""
-Build Commands:
-    MacOS
-python -m nuitka --standalone --macos-create-app-bundle --macos-app-name="MolAlign" --enable-plugin=pyside6 --enable-plugin=numpy --enable-plugin=anti-bloat --nofollow-import-to=vtkmodules --no-deployment-flag=excluded-module-usage --jobs=8 --output-dir=dist --remove-output main.py
-cp -R /opt/venv/venv_pyscf_parallel/lib/python3.12/site-packages/vtkmodules ./dist/main.app/Contents/MacOS/
-
-mv ./dist/main.app ./dist/MolAlign.app
-/usr/libexec/PlistBuddy -c "Set :CFBundleName MolAlign" ./dist/MolAlign.app/Contents/Info.plist
-/usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName MolAlign" ./dist/MolAlign.app/Contents/Info.plist
-
-sudo cp -r ./dist/MolAlign.app/ /usr/local/
-sudo ln -sf "/usr/local/MolAlign.app/Contents/MacOS/main" /usr/local/bin/molalign
-
-zip -r9 MolAlign_macOS_arm64.zip dist/MolAlign.app CREDITS.txt
-"""
 
 # Atomic Symbol to Atomic Number Mapping
 SYMBOL_TO_Z = {
