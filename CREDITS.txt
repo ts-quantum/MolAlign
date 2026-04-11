@@ -1,0 +1,50 @@
+============================================================
+MolAlign - Credits & Licenses
+============================================================
+
+MolAlign is a batch tool for analyzing, aligning, and 
+exporting chemical trajectories (IRC/XYZ).
+
+This application is provided as open-source software. 
+It bundles several third-party libraries, each governed 
+by their own licenses:
+
+CORE LIBRARIES:
+------------------------------------------------------------
+1. Python (PSF License)
+   https://python.org
+
+2. PySide6 (GNU LGPL v3)
+   https://qt.io
+
+3. NumPy (BSD License)
+   https://numpy.org
+
+4. SciPy (BSD License)
+   https://scipy.org
+
+5. PyVista & VTK (MIT / BSD License)
+   https://pyvista.org | https://vtk.org
+
+UTILITIES:
+------------------------------------------------------------
+6. Matplotlib (PSF/BSD compatible)
+   https://matplotlib.org
+
+7. Click (BSD License)
+   https://palletsprojects.com
+
+8. tqdm (MIT/MPL License)
+   https://github.io
+
+9. psutil (BSD License)
+   https://github.com
+
+------------------------------------------------------------
+DISTRIBUTION & SOURCE CODE:
+The source code for this application is available at:
+https://github.com/ts-quantum/MolAlign
+
+This software is distributed in the hope that it will be 
+useful, but WITHOUT ANY WARRANTY.
+============================================================

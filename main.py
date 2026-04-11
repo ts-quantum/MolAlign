@@ -1,15 +1,14 @@
 # MolAlign 
 import sys, os, re
+base_dir = os.path.dirname(sys.executable)
+if base_dir not in sys.path:
+    sys.path.insert(0, base_dir)
+
 import platform, subprocess, psutil, click
 from tqdm import tqdm
-from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QColor
 import pyvista as pv
 from collections import defaultdict
-from pyscf import data, lib
-from pyscf.data import elements
 import numpy as np
-from pathlib import Path
 from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
 import math
@@ -18,6 +17,42 @@ from PySide6.QtCore import QCoreApplication, QEventLoop
 
 from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import as_completed
+
+""""
+Build Commands:
+    MacOS
+python -m nuitka --standalone --macos-create-app-bundle --macos-app-name="MolAlign" --enable-plugin=pyside6 --enable-plugin=numpy --enable-plugin=anti-bloat --nofollow-import-to=vtkmodules --no-deployment-flag=excluded-module-usage --jobs=8 --output-dir=dist --remove-output main.py
+cp -R /opt/venv/venv_pyscf_parallel/lib/python3.12/site-packages/vtkmodules ./dist/main.app/Contents/MacOS/
+
+mv ./dist/main.app ./dist/MolAlign.app
+/usr/libexec/PlistBuddy -c "Set :CFBundleName MolAlign" ./dist/MolAlign.app/Contents/Info.plist
+/usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName MolAlign" ./dist/MolAlign.app/Contents/Info.plist
+
+sudo cp -r ./dist/MolAlign.app/ /usr/local/
+sudo ln -sf "/usr/local/MolAlign.app/Contents/MacOS/main" /usr/local/bin/molalign
+
+zip -r9 MolAlign_macOS_arm64.zip dist/MolAlign.app CREDITS.txt
+"""
+
+# Atomic Symbol to Atomic Number Mapping
+SYMBOL_TO_Z = {
+    'H': 1, 'He': 2, 'Li': 3, 'Be': 4, 'B': 5, 'C': 6, 'N': 7, 'O': 8, 'F': 9, 'Ne': 10,
+    'Na': 11, 'Mg': 12, 'Al': 13, 'Si': 14, 'P': 15, 'S': 16, 'Cl': 17, 'Ar': 18,
+    'K': 19, 'Ca': 20, 'Sc': 21, 'Ti': 22, 'V': 23, 'Cr': 24, 'Mn': 25, 'Fe': 26,
+    'Co': 27, 'Ni': 28, 'Cu': 29, 'Zn': 30, 'Ga': 31, 'Ge': 32, 'As': 33, 'Se': 34,
+    'Br': 35, 'Kr': 36, 'Rb': 37, 'Sr': 38, 'Y': 39, 'Zr': 40, 'Nb': 41, 'Mo': 42,
+    'Tc': 43, 'Ru': 44, 'Rh': 45, 'Pd': 46, 'Ag': 47, 'Cd': 48, 'In': 49, 'Sn': 50,
+    'Sb': 51, 'Te': 52, 'I': 53, 'Xe': 54, 'Cs': 55, 'Ba': 56, 'La': 57, 'Ce': 58,
+    'Pr': 59, 'Nd': 60, 'Pm': 61, 'Sm': 62, 'Eu': 63, 'Gd': 64, 'Tb': 65, 'Dy': 66,
+    'Ho': 67, 'Er': 68, 'Tm': 69, 'Yb': 70, 'Lu': 71, 'Hf': 72, 'Ta': 73, 'W': 74,
+    'Re': 75, 'Os': 76, 'Ir': 77, 'Pt': 78, 'Au': 79, 'Hg': 80, 'Tl': 81, 'Pb': 82,
+    'Bi': 83, 'Po': 84, 'At': 85, 'Rn': 86, 'Fr': 87, 'Ra': 88, 'Ac': 89, 'Th': 90,
+    'Pa': 91, 'U': 92, 'Np': 93, 'Pu': 94, 'Am': 95, 'Cm': 96, 'Bk': 97, 'Cf': 98,
+    'Es': 99, 'Fm': 100, 'Md': 101, 'No': 102, 'Lr': 103, 'Rf': 104, 'Db': 105,
+    'Sg': 106, 'Bh': 107, 'Hs': 108, 'Mt': 109, 'Ds': 110, 'Rg': 111, 'Cn': 112,
+    'Nh': 113, 'Fl': 114, 'Mc': 115, 'Lv': 116, 'Ts': 117, 'Og': 118
+}
+Z_TO_SYMBOL = {v: k for k, v in SYMBOL_TO_Z.items()}
 
 class MoleculeData:
     def __init__(self, *, name=None, atom_points=None, atom_types=None, energies=None):
@@ -58,11 +93,8 @@ class MoleculeData:
                 for entry in block:
                     parts = entry.split()
                     if len(parts) < 4: continue
-                    symbol = parts[0]
-                    try: 
-                        at_num = data.elements.charge(symbol) # map symbol to atomic number
-                    except KeyError:
-                        at_num = 0 
+                    symbol = parts[0].capitalize()
+                    at_num = SYMBOL_TO_Z.get(symbol, 0)
                     types.append(at_num) 
                     coords.append([float(x) for x in parts[1:4]])
                 
@@ -393,7 +425,7 @@ def export_xyz(data_,path):
             for i in range(n_atoms):
                 atom_coord = data_.atom_points[j][i]
                 at_num = data_.atom_types[j][i]
-                symbol = elements.ELEMENTS[at_num] 
+                symbol = Z_TO_SYMBOL.get(at_num, "X")
                 f.write(f"{symbol:2} {atom_coord[0]:12.8f} {atom_coord[1]:12.8f} {atom_coord[2]:12.8f}\n")
     log = f"xyz data {data_.name} written as: {os.path.basename(path)}"
     return log
@@ -1163,7 +1195,7 @@ cov_radii = {
 default_radius = 1.0
 
 # Version:
-ver_no = 1.1
+ver_no = 1.2
 
 @click.command(context_settings=dict(ignore_unknown_options=True))
 @click.argument('files', nargs=-1) # 'e.g. file1.xyz file2.xyz ...'
@@ -1235,38 +1267,24 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
         log_ = export_xyz(combined_data, f"{fname}.xyz")
         click.echo(f"Trajectory saved as {fname}.xyz")
         log_data.append(log_)
-        if split == 'orca':
-            try:
-                script_name = create_split_template_orca(fname, ver_no)
-                msg = f"Batch template created: {os.path.basename(script_name)}"
-                click.echo(msg)
-                log_data.append(msg)
-            except Exception as e:
-                msg = f"Failed to create template: {str(e)}", "error"
-                click.echo(msg)
-                log_data.append(msg)
-            
-        elif split == 'nw':
-            try:
-                script_name = create_split_template_nw(fname, ver_no)
-                msg = f"Batch template created: {os.path.basename(script_name)}"
-                click.echo(msg)
-                log_data.append(msg)
-            except Exception as e:
-                msg = f"Failed to create template: {str(e)}", "error"
-                click.echo(msg)
-                log_data.append(msg)
-        elif split == "psi4":
-            try:
-                script_name = create_split_template_psi4(fname, ver_no)
-                msg = f"Batch template created: {os.path.basename(script_name)}"
-                click.echo(msg)
-                log_data.append(msg)
-            except Exception as e:
-                msg = f"Failed to create template: {str(e)}", "error"
-                click.echo(msg)
-                log_data.append(msg)
+         # Mapping für Split-Templates
+        split_funcs = {
+            'orca': create_split_template_orca,
+            'nw': create_split_template_nw,
+            'psi4': create_split_template_psi4
+        }
         
+        if split in split_funcs:
+            try:
+                script_name = split_funcs[split](fname, ver_no)
+                msg = f"Batch template created: {os.path.basename(script_name)}"
+                click.echo(msg)
+                log_data.append(msg)
+            except Exception as e:
+                msg = f"Failed to create template: {str(e)}"
+                click.echo(msg)
+                log_data.append(msg)
+
     if pov:
         length = int(len(combined_data.energies))
         export_pov_header(ver_no, length,f"{fname}.inc",obj_name)
@@ -1350,9 +1368,10 @@ if __name__ == '__main__':
 
     try:
         n_threads = get_optimal_cores()
-        lib.num_threads(n_threads)
-        print(f"Auto-Config: PySCF uses {n_threads} Threads.")
+        print(f"Auto-Config: MolAlign uses {n_threads} Threads.")
     except Exception as e:
         print(f"Could not set Threads automatically: {e}")
 
+    import multiprocessing
+    multiprocessing.freeze_support()
     main()
