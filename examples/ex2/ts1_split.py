@@ -1,12 +1,12 @@
 # --- CONFIGURATION: ADJUST BEFORE RUNNING ---
-##### created by MolAlign 1.1 (C) 2026 by Dr. Tobias Schulz
+##### created by MolAlign 1.2 (C) 2026 by Dr. Tobias Schulz
 ##### This Python Script will create a series of ORCA Input files from 
 ##### a given IRC Trajectory along with a "run_ts1_batch.sh" script
 ### Edit method, basis set, etc. here
-charge =''  # e.g. '0'	
-mult ='' 	# e.g. '1'		
-basis =''   # e.g. 'def2-SVP'
-method =''  # e.g. 'HF', 'B3LYP', 'PBE0' or other XC
+charge ='0'  # e.g. '0'	
+mult ='3' 	# e.g. '1'		
+basis ='def2-SVP'   # e.g. 'def2-SVP'
+method ='PBE0 D3BJ UKS'  # e.g. 'HF', 'B3LYP', 'PBE0' or other XC
 mem = '2000'
 nproc = '8'
 ### adapt to your specific environment
