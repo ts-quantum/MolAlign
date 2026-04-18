@@ -6,10 +6,16 @@
  nprocs 8
 end
 
+%scf Guess MoRead
+  MOInp "ts1.f.gbw"
+end
+
 %irc
+    InitHess read
+    Hess_Filename "ts1.f.hess"
     MaxIter 80
     TolRMSG   5.e-5
     TolMaxG   2.e-4
 end
 
-* xyzfile 0 1 ts1.opt.xyz
+* xyzfile 0 3 ts1.opt.xyz
