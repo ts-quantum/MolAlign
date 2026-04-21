@@ -808,12 +808,14 @@ def export_pov_mol(points, atom_types,cov_radii=None, default_radius=None,
 #### export Blender multi ####
 class ExportWorker(QThread):
     progress = Signal(int)  # Signal for progressbar (0-100)   
-    finished = Signal(bool, str) # Signal, after completion
+    finished = Signal(bool, str, str) # Signal, after completion
 
-    def __init__(self, tasks, base_name):
+    def __init__(self, tasks, base_name, obj_prefix, script_name):
         super().__init__()
         self.tasks = tasks
         self.base_name = base_name
+        self.obj_prefix = obj_prefix
+        self.script_name = script_name
         self._is_running = True
         self.executor = None
 
@@ -834,13 +836,13 @@ class ExportWorker(QThread):
             futures = [self.executor.submit(export_single_frame, t) for t in self.tasks]
             for _ in as_completed(futures):
                 if not self._is_running:
-                    self.finished.emit(False, self.base_name)
+                    self.finished.emit(False, self.obj_prefix, self.script_name)
                     return
                 
                 completed += 1
                 self.progress.emit(int((completed / length) * 100))
         
-        self.finished.emit(True, self.base_name)
+        self.finished.emit(True, self.obj_prefix, self.script_name)
 
 def get_radius_by_group(atomic_number):
     # Definition of Atom Radii
@@ -916,14 +918,14 @@ def draw_mol_bld(atom_points, atom_types, cpk_colors=None, cov_radii=None, defau
     return combined
 
 def export_single_frame(args):
-    i, atom_points, atom_types, cpk, radii, def_rad, base_name = args
+    i, atom_points, atom_types, cpk, radii, def_rad, base_name, obj_prefix= args
     
     # create geometry mesh
     mesh = draw_mol_bld(atom_points, atom_types, cpk, radii, def_rad)
     
     # export (needs plotter)
     pl = pv.Plotter(off_screen=True)
-    pl.add_mesh(mesh, scalars="RGB", rgb=True)
+    pl.add_mesh(mesh, name=f"{obj_prefix}_{i:03d}", scalars="RGB", rgb=True)
 
     file_path = f"{base_name}_{i:03d}.glb"
 
@@ -931,77 +933,117 @@ def export_single_frame(args):
     pl.close()
     return file_path
 
-def generate_blender_script_multi(base_name, ver_no):
+def generate_blender_script_multi(obj_prefix, script_name, ver_no):
     """
     Generates a Blender Python script to batch-import multiple GLB files
     and sequence them in the timeline (One frame per file).
     """
 
     current_path = os.getcwd()
-
-    script_path = f"{base_name}_animate.py"
+    
+    script_path = os.path.join(current_path, script_name)
+    clean_folder = current_path.replace('\\', '/')
     
     blender_script = f"""# created with MolAlign {ver_no} by (C) 2026 Dr. Tobias Schulz
+# ==============================================================================
+# USER GUIDE for MolAlign Blender Animation
+# ==============================================================================
+# 1. GLOBAL VISUAL CONTROL: 
+#    This script links all imported meshes to "MASTER" materials in your template.
+#    Edit these materials in the 'Material Properties' tab to update ALL frames:
+#    - 'MASTER_Molecule'  -> Controls atoms and bonds (mol_***)
+#
+# 2. RETAINING COLORS (CPK):
+#    'MASTER_Molecule' use 'Vertex Colors' (Color Attributes).
+#    In the Shader Editor, ensure a 'Color Attribute' node is connected to the 
+#    'Base Color' and 'Emission Color' of the Principled BSDF.
+#
+# 3. POSITIONING:
+#    Select the 'TRAJECTORY_CONTROL' (Empty) to move, rotate, or scale the 
+#    entire animation sequence simultaneously over your scene.
+# ==============================================================================
+
 import bpy
-import os
+import os, re
 
 # --- Settings ---
-path_to_glb = "{current_path}" # adapt path to *glb files!
+obj_prefix = "{obj_prefix}"
+frame_pattern = re.compile(f'{{obj_prefix}}_(\\\\d+)$')
+
+blend_file_path = bpy.data.filepath
+if blend_file_path:
+    path_to_glb = os.path.dirname(blend_file_path)
+else:
+    # Fallback to the absolute path where it was created
+    path_to_glb = "{clean_folder}" 
 extension = ".glb"
 
-# 1. Empty current Scene (recommended)
-bpy.ops.object.select_all(action='SELECT')
-bpy.ops.object.delete()
+# 1. Clean-up (Protect template and master dummies)
+protected = ["Camera", "Plane", "Cylinder", "Sun", "World", "TRAJECTORY_CONTROL", "MASTER", "DUMMY"]
+for obj in bpy.data.objects:
+    if not any(p in obj.name for p in protected):
+        bpy.data.objects.remove(obj, do_unlink=True)
+
+# 2. Control Object
+if "TRAJECTORY_CONTROL" in bpy.data.objects:
+    control_obj = bpy.data.objects["TRAJECTORY_CONTROL"]
+else:
+    control_obj = bpy.data.objects.new("TRAJECTORY_CONTROL", None)
+    bpy.context.collection.objects.link(control_obj)
 
 # Find and sort all Files
 files = sorted([f for f in os.listdir(path_to_glb) if f.endswith(extension)])
 
 for i, filename in enumerate(files):
     filepath = os.path.join(path_to_glb, filename)
-    
-    # 2. IMPORT (imported objects are automatically selected)
     bpy.ops.import_scene.gltf(filepath=filepath)
     imported_objs = bpy.context.selected_objects
     
-    current_frame = i + 1 # Blender starts with Frame 1
+    current_frame = i + 1
 
     for obj in imported_objs:
-        # --- Set KEYFRAMES ---
-        
-        # A) Predecessor Frame: invisible
-        if current_frame > 1:
+        match = frame_pattern.match(obj.name)
+        if match: 
+            obj.parent = control_obj
+            
+            # --- Master Material Linking ---
+            # Look for MASTER_Molecule in the template and assign it
+            master_mat = bpy.data.materials.get("MASTER_Molecule")
+            if master_mat:
+                obj.data.materials.clear()
+                obj.data.materials.append(master_mat)
+            
+            # --- Set KEYFRAMES (Visibility) ---
+            if current_frame > 1:
+                obj.hide_viewport = True
+                obj.hide_render = True
+                obj.keyframe_insert(data_path="hide_viewport", frame=current_frame - 1)
+                obj.keyframe_insert(data_path="hide_render", frame=current_frame - 1)
+            
+            obj.hide_viewport = False
+            obj.hide_render = False
+            obj.keyframe_insert(data_path="hide_viewport", frame=current_frame)
+            obj.keyframe_insert(data_path="hide_render", frame=current_frame)
+            
             obj.hide_viewport = True
             obj.hide_render = True
-            obj.keyframe_insert(data_path="hide_viewport", frame=current_frame - 1)
-            obj.keyframe_insert(data_path="hide_render", frame=current_frame - 1)
-        
-        # B) Current Frame: visible
-        obj.hide_viewport = False
-        obj.hide_render = False
-        obj.keyframe_insert(data_path="hide_viewport", frame=current_frame)
-        obj.keyframe_insert(data_path="hide_render", frame=current_frame)
-        
-        # C) Successor Frame: invisible
-        obj.hide_viewport = True
-        obj.hide_render = True
-        obj.keyframe_insert(data_path="hide_viewport", frame=current_frame + 1)
-        obj.keyframe_insert(data_path="hide_render", frame=current_frame + 1)
+            obj.keyframe_insert(data_path="hide_viewport", frame=current_frame + 1)
+            obj.keyframe_insert(data_path="hide_render", frame=current_frame + 1)
 
 # Adapt Timeline
 bpy.context.scene.frame_end = len(files)
-print(f"Finished! {{len(files)}} Frames processed.")
+bpy.context.scene.frame_set(1)
+print(f"Finished! {{len(files)}} Frames processed and linked to MASTER_Molecule.")
 """
     with open(script_path, "w") as f:
         f.write(blender_script)
 
-def on_export_finished(success, base_name):
-        log = []
+def on_export_finished(success, obj_prefix, script_name):
         if success:
-            generate_blender_script_multi(base_name, ver_no)
+            generate_blender_script_multi(obj_prefix, script_name, ver_no)
             print(f"Blender multi file export done")
         else:
             print(f"Export cancelled", "warning")
-        return log
 
 pbar = None
 def update_progress(val):
@@ -1012,16 +1054,17 @@ def update_progress(val):
 
 #### export Blender one ####
 class OneFileExportWorker(QThread): # One File
-    finished = Signal(bool, str) # Variables: Success, Path
+    finished = Signal(bool, str, str) # Variables: Success, Path
 
-    def __init__(self, data, path, name, cpk, radii, def_rad):
+    def __init__(self, data, base_name, name, cpk, radii, def_rad, script_name):
         super().__init__()
         self.data = data
-        self.path = path
+        self.base_name = base_name
         self.name = name
         self.cpk = cpk
         self.radii = radii
         self.def_rad = def_rad
+        self.script_name = script_name
 
     def run(self):
         try:
@@ -1038,81 +1081,101 @@ class OneFileExportWorker(QThread): # One File
                 # Generate a unique name for the Blender script
                 pl.add_mesh(mesh, name=f"{self.name}_{i:03d}", scalars="RGB", rgb=True)
                 
-            pl.export_gltf(f"{self.path}_one.glb")
+            pl.export_gltf(f"{self.base_name}.glb")
             pl.close()
-            self.finished.emit(True, self.path)
+            self.finished.emit(True, self.name, self.script_name)
         except Exception as e:
-            self.finished.emit(False, "")
+            self.finished.emit(False, self.name, self.script_name)
 
-def on_one_file_finished(success, path):
+def on_one_file_finished(success, name, s_name):
     if success:
-        generate_blender_script(path, ver_no) 
-        print(f"Success: GLB export and script created for {os.path.basename(path)}")
+        generate_blender_script(name, s_name, ver_no) 
+        print(f"Success: Blender One File Export finished")
     else:
         print("Error: GLB export failed.")
 
-def generate_blender_script(path, ver_no):
-    """
-    Generates a companion Blender Python script for the exported GLB file.
-    This script sets up a frame-by-frame animation by toggling object visibility.
-    """
-    script_path = f"{path}_one_file.py"
-        
-    blender_script = f"""import bpy
-# created with MolAlign {ver_no} (C)2026 Dr. Tobias Schulz
-# 1. Identify all objects starting with "mol_" (representing trajectory frames)
-steps = [obj for obj in bpy.data.objects if "mol_" in obj.name]
-steps.sort(key=lambda x: x.name)
+def generate_blender_script(obj_prefix, script_name, ver_no):
+    
+    current_path = os.getcwd()
+    
+    script_path = os.path.join(current_path, script_name)
 
-if not steps:
-    print("Error: No 'mol_' objects found in the scene!")
+    blender_script = f"""# created with MolAlign {ver_no} by (C) 2026 Dr. Tobias Schulz
+# ==============================================================================
+# USER GUIDE for MolVista Blender Animation
+# ==============================================================================
+# 1. GLOBAL VISUAL CONTROL: 
+#    This script links all imported meshes to "MASTER" materials in your template.
+#    Edit these materials in the 'Material Properties' tab to update ALL frames:
+#    - 'MASTER_Molecule'  -> Controls atoms and bonds (mol_***)
+#
+# 2. RETAINING COLORS (CPK):
+#    'MASTER_Molecule' use 'Vertex Colors' (Color Attributes).
+#    In the Shader Editor, ensure a 'Color Attribute' node is connected to the 
+#    'Base Color' and 'Emission Color' of the Principled BSDF.
+#
+# 3. POSITIONING:
+#    Select the 'TRAJECTORY_CONTROL' (Empty) to move, rotate, or scale the 
+#    entire animation sequence simultaneously over your scene.
+# ==============================================================================
+
+import bpy, re
+# --- Settings ---
+obj_prefix = "{obj_prefix}"
+# Regex to find objects with index: prefix_001, prefix_002...
+frame_pattern = re.compile(f'{{obj_prefix}}_(\\\\d+)$')
+
+# 1. Clean-up & Master Protection
+protected = ["Camera", "Plane", "Cylinder", "Sun", "World", "TRAJECTORY_CONTROL", "MASTER", "DUMMY"]
+for obj in bpy.data.objects:
+    if not any(p in obj.name for p in protected) and not frame_pattern.match(obj.name):
+        bpy.data.objects.remove(obj, do_unlink=True)
+
+# 2. Control Object
+if "TRAJECTORY_CONTROL" not in bpy.data.objects:
+    cntrl = bpy.data.objects.new("TRAJECTORY_CONTROL", None)
+    bpy.context.collection.objects.link(cntrl)
 else:
-    # 2. Detach objects from any hierarchies (Unparent)
-    # This ensures each frame can be transformed independently if needed
-    bpy.ops.object.select_all(action='DESELECT')
-    for obj in steps:
-        obj.select_set(True)
+    cntrl = bpy.data.objects["TRAJECTORY_CONTROL"]
+
+# 3. Process existing objects (All frames are already in the scene after GLB import)
+frames = {{}}
+for obj in bpy.data.objects:
+    match = frame_pattern.match(obj.name)
+    if match:
+        idx = int(match.group(1))
+        frames[idx] = obj
+        obj.parent = cntrl
+        
+        # Link to MASTER material
+        master_mat = bpy.data.materials.get("MASTER_Molecule")
+        if master_mat:
+            obj.data.materials.clear()
+            obj.data.materials.append(master_mat)
+
+# 4. Create Animation
+for idx, obj in frames.items():
+    target_frame = idx + 1
+    # Visibility via Scale
+    obj.scale = (0,0,0)
+    obj.keyframe_insert(data_path="scale", frame=target_frame - 1)
+    obj.scale = (1,1,1)
+    obj.keyframe_insert(data_path="scale", frame=target_frame)
+    obj.scale = (0,0,0)
+    obj.keyframe_insert(data_path="scale", frame=target_frame + 1)
     
-    # Clear parents while maintaining the current world transformation
-    bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
-    bpy.ops.object.select_all(action='DESELECT')
+    # Constant interpolation
+    if obj.animation_data and obj.animation_data.action:
+        for fc in obj.animation_data.action.fcurves:
+            for kp in fc.keyframe_points: kp.interpolation = 'CONSTANT'
 
-    # 3. Setup Scene Timeline
-    bpy.context.scene.frame_start = 1
-    bpy.context.scene.frame_end = len(steps)
-    
-    # 4. Create Frame-by-Frame Visibility Animation
-    for i, obj in enumerate(steps):
-        if obj.animation_data:
-            obj.animation_data_clear()
-            
-        target_frame = i + 1
-        
-        # Initial State: Hidden (Scale set to 0)
-        obj.scale = (0, 0, 0)
-        obj.keyframe_insert(data_path="scale", frame=0)
-        
-        # Visible State: Active only at its specific frame
-        obj.scale = (1, 1, 1)
-        obj.keyframe_insert(data_path="scale", frame=target_frame)
-        
-        # Hide immediately after its frame
-        obj.scale = (0, 0, 0)
-        obj.keyframe_insert(data_path="scale", frame=target_frame + 1)
-
-        # Force CONSTANT interpolation to prevent smooth scaling effects
-        if obj.animation_data and obj.animation_data.action:
-            for fcurve in obj.animation_data.action.fcurves:
-                for kp in fcurve.keyframe_points:
-                    kp.interpolation = 'CONSTANT'
-
+if frames:
+    bpy.context.scene.frame_end = max(frames.keys()) + 1
     bpy.context.scene.frame_set(1)
-    print(f"Animation Setup Complete: {{len(steps)}} frames sequenced.")
 """
-
     with open(script_path, "w") as f:
         f.write(blender_script)
-      
+  
 ### LOG File ###
 def write_batch_log(output_path, log_entries):
     log_name = os.path.splitext(output_path)[0] + ".log"
@@ -1188,8 +1251,8 @@ ver_no = 1.2
 @click.option('--xyz', is_flag=True, help='Export combined .xyz trajectory')
 @click.option('--log', is_flag=True, help='Provide log File')
 
-@click.option('--obj_name', '-n', default='molecule',
-              help='object name, default "molecule" ') 
+@click.option('--obj_name', '-n', default='mol',
+              help='object name, default "mol" ') 
 @click.option('--fname', '-f', default='output',
               help='output file name or base name') 
 @click.option('--split', default='none', type=click.Choice(['none','orca', 'nw', 'psi4']), 
@@ -1284,6 +1347,8 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
         app = QCoreApplication.instance() or QCoreApplication([])
 
         base_name = fname
+        obj_prefix = obj_name # object designation inside Blender, mol_001, ...
+        script_name = "import_and_animate.py" # Import Script for Blender
 
         raw_points = [np.array(p) for p in combined_data.atom_points]
         raw_types = list(combined_data.atom_types)
@@ -1294,7 +1359,7 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
         # 2. Create the list of tasks for EVERY frame
         # This is the list the executor will iterate over later
         tasks = [
-            (i, raw_points[i], raw_types[i], pure_cpk, pure_radii, def_rad, base_name)
+            (i, raw_points[i], raw_types[i], pure_cpk, pure_radii, def_rad, base_name, obj_prefix)
             for i in range(len(raw_points))
         ]
 
@@ -1302,13 +1367,13 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
         #initialize tqdm
         pbar = tqdm(total=100, desc="Exporting Blender Frames", unit="%")
     
-        worker = ExportWorker(tasks, base_name)
+        worker = ExportWorker(tasks, base_name, obj_prefix, script_name)
         worker.progress.connect(update_progress)
 
         # local Event-Loop, wait for 'finished' 
         loop = QEventLoop()
-        worker.finished.connect(lambda success, b: [
-            on_export_finished(success, b), 
+        worker.finished.connect(lambda success, obj_prefix, script_name: [
+            on_export_finished(success, obj_prefix, script_name), 
             loop.quit(),
             pbar.close()
         ])
@@ -1317,19 +1382,23 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
         worker.start()
         loop.exec() # block until finished!
 
-        log_data.append(f"Blender multi file export done to {fname}_*.glb")
-        log_data.append(f"Configure Script {fname}_animate.py created ")
+        log_data.append(f"Blender multi file export done, files written to {fname}_*.glb")
+        log_data.append(f"Blender Import and Animate Script written to {script_name}")
 
     if bld_one:
         click.echo("Bld One File Export startet... ")
         app = QCoreApplication.instance() or QCoreApplication([])
 
-        one_worker = OneFileExportWorker(combined_data, fname, obj_name, cpk_colors,
-                cov_radii, default_radius)
+        base_name = fname
+        obj_prefix = obj_name # object designation inside Blender, mol_001, ...
+        script_name = "import_and_animate.py" # Import Script for Blender
+
+        one_worker = OneFileExportWorker(combined_data, base_name, obj_name, cpk_colors,
+                cov_radii, default_radius, script_name)
         
         loop = QEventLoop()
-        one_worker.finished.connect(lambda success, path: [
-            on_one_file_finished(success, path), 
+        one_worker.finished.connect(lambda success, obj_name, script_name: [
+            on_one_file_finished(success, obj_name, script_name), 
             loop.quit()
         ])
         
@@ -1337,7 +1406,8 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
         one_worker.start()
         loop.exec() # block until finished!
 
-        log_data.append(f"Blender One File export complete, {os.path.basename(fname)}.glb")
+        log_data.append(f"Blender One File export complete, {os.path.basename(base_name)}.glb")
+        log_data.append(f"Blender Import and Animate Script written to {script_name}")
 
     if log:
         write_batch_log(f"{fname}.log", log_data)
