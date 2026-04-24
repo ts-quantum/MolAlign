@@ -1,0 +1,51 @@
+MolAlign 1.2 (C) 2026 Dr. Tobias Schulz
+Batch Processing Log
+============================
+
+Input files: ('../2.irc.fxyz', '../2.irc.bxyz', '../4.irc.fxyz', '../4.irc.bxyz', '../6.irc.fxyz', '../6.irc.bxyz')
+Alignment:
+pre-check with first and second segment
+Atom order is already consistent between segments.
+first segment reversed
+Loop over all segments
+Step 1
+Best alignment strategy: normal (RMSD: 0.0000 Å)
+Atom order is already consistent between segments.
+Alignment step 1, dataset 2.irc.bxyz
+Kabsch Alignment rotation: X=-0.00°, Y=-0.00°, Z=0.00°
+Kabsch ref. translation x=-0.01 y=0.00 z=-0.00
+Kabsch target translation x=-0.01 y=0.00 z=-0.00
+Step 2
+Best alignment strategy: flip_1 (RMSD: 0.0065 Å)
+Atom re-ordering detected: 16 atoms rearranged to match reference.
+Alignment step 2, dataset 4.irc.fxyz
+Kabsch Alignment rotation: X=179.07°, Y=0.26°, Z=-143.58°
+Kabsch ref. translation x=-0.01 y=0.00 z=-0.00
+Kabsch target translation x=0.00 y=-0.00 z=0.00
+Step 3
+Best alignment strategy: normal (RMSD: 0.0023 Å)
+Atom re-ordering detected: 16 atoms rearranged to match reference.
+Alignment step 3, dataset 4.irc.bxyz
+Kabsch Alignment rotation: X=179.07°, Y=0.26°, Z=-143.58°
+Kabsch ref. translation x=-0.01 y=0.00 z=-0.00
+Kabsch target translation x=0.00 y=-0.00 z=0.00
+Step 4
+Best alignment strategy: flip_1 (RMSD: 0.0126 Å)
+Atom re-ordering detected: 16 atoms rearranged to match reference.
+Alignment step 4, dataset 6.irc.fxyz
+Kabsch Alignment rotation: X=178.57°, Y=0.78°, Z=-108.43°
+Kabsch ref. translation x=-0.01 y=0.00 z=-0.00
+Kabsch target translation x=0.01 y=-0.00 z=0.00
+Step 5
+Best alignment strategy: normal (RMSD: 0.0112 Å)
+Atom re-ordering detected: 16 atoms rearranged to match reference.
+Alignment step 5, dataset 6.irc.bxyz
+Kabsch Alignment rotation: X=178.57°, Y=0.78°, Z=-108.43°
+Kabsch ref. translation x=-0.01 y=-0.00 z=-0.00
+Kabsch target translation x=0.01 y=-0.00 z=0.00
+
+[DONE] Trajektory with 245 Frames created.
+[INFO] Average RMSD: 0.0024 Å (Max: 0.0061 Å)
+xyz data None written as: Cyhex.xyz
+Blender multi file export done, files written to Cyhex_*.glb
+Blender Import and Animate Script written to import_and_animate.py

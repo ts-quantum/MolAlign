@@ -184,8 +184,10 @@ def align_structures(ref_coords, target_coords):
 
     # 5. Calculate transformed coordinates
     aligned_coords = (target_centered @ r.T) + centroid_ref
+
+    rmsd = np.sqrt(np.mean(np.linalg.norm(ref_centered - target_centered @ r.T, axis=1)**2))
     
-    return aligned_coords, r, centroid_ref,  centroid_target
+    return aligned_coords, r, centroid_ref,  centroid_target, rmsd
 
 def transform_trajectory(trajectory_coords, r_matrix, ref_centroid, target_centroid):
     """Applies Transformation on whole trajectory"""
@@ -221,7 +223,7 @@ def find_best_flip_strategy(data0, data1):
             mapping = find_mapping(c0, c1, data0.atom_types[0], data1.atom_types[0])
             
             # Calculate RMSD after a temporary Kabsch alignment to verify the fit
-            _, R, cent0, cent1 = align_structures(c0, c1[mapping])
+            _, R, cent0, cent1, rmsd = align_structures(c0, c1[mapping])
             
             # Transform the target coordinates to the reference frame for RMSD check
             aligned_c1 = (c1[mapping] - cent1) @ R + cent0
@@ -275,7 +277,17 @@ def find_mapping(coords_ref, coords_target, types_ref, types_target):
         
         return col_ind
 
-def chain_alignment(all_datasets):
+def bridge_segments(coords_1, coords_2, types, steps=10):
+    bridge = []
+    bridge_types = []
+    for i in range(1,steps +1):
+        w = i / (steps+1)
+        interp_coords = (1-w) * coords_1 + w * coords_2
+        bridge.append(interp_coords)
+        bridge_types.append(types)
+    return bridge, bridge_types
+
+def chain_alignment(all_datasets, bridging_pts=10, threshold=0.2):
     combined_data = all_datasets[0]
     alignment_rmsds = []
     log = []
@@ -333,7 +345,7 @@ def chain_alignment(all_datasets):
             mapping = find_mapping(c0, c1, ref_frame, next_data.atom_types[0])
             
             # Calculate RMSD after a temporary Kabsch alignment to verify the fit
-            _, R, cent0, cent1 = align_structures(c0, c1[mapping])
+            _, R, cent0, cent1, _ = align_structures(c0, c1[mapping])
             
             # Transform the target coordinates to the reference frame for RMSD check
             aligned_c1 = (c1[mapping] - cent1) @ R + cent0
@@ -367,25 +379,38 @@ def chain_alignment(all_datasets):
 
         # Jetzt das (ggf. geflippte) Teil alignen und mergen
   
-        _, r, centroid_ref,  centroid_target = align_structures(ref_frame, target_frame)
+        aligned_str, r, centroid_ref,  centroid_target, rmsd = align_structures(ref_frame, target_frame)
 
         angles = get_euler_angles(r)
         log.append(f"Alignment step {i}, dataset {next_data.name}")
+        if rmsd >= threshold:
+            log.append(f"Kabsch Alignment RMSD={rmsd:.4f} - poor fit")
+            if bridging_pts > 0:
+                log.append(f"{bridging_pts}Bridging Points are added for smooth transition at junction")
+        elif rmsd < threshold:
+            log.append(f"Kabsch Alignment RMSD={rmsd:.4f} - excellent fit")
         log.append(f"Kabsch Alignment rotation: X={angles[0]:.2f}°, Y={angles[1]:.2f}°, Z={angles[2]:.2f}°")
         log.append(f"Kabsch ref. translation x={centroid_ref[0]:.2f} y={centroid_ref[1]:.2f} z={centroid_ref[2]:.2f}")
         log.append(f"Kabsch target translation x={centroid_target[0]:.2f} y={centroid_target[1]:.2f} z={centroid_target[2]:.2f}")
 
         aligned_coords = transform_trajectory(next_data.atom_points, r, centroid_ref,  centroid_target)
         
+        #bridging points for smooth transition at junction
+        trans_pts = []
+        trans_tps = []
+        if rmsd >= threshold and bridging_pts > 0:
+            # bridge segments in case of high rmsd
+            trans_pts, trans_tps = bridge_segments(ref_frame, aligned_str, combined_data.atom_types[-1], bridging_pts) 
+            
         step_rmsd = get_min_rmsd_kabsch(ref_frame, aligned_coords[0])
         alignment_rmsds.append(step_rmsd)
 
         energy_offset = combined_data.energies[-1] - next_data.energies[0]
         shifted_energies = [e + energy_offset for e in next_data.energies]
 
-        combined_points = list(combined_data.atom_points) + list(aligned_coords[1:])
-        combined_types = list(combined_data.atom_types) + list(next_data.atom_types[1:])
-        combined_energies = list(combined_data.energies) + list(shifted_energies[1:])
+        combined_points = list(combined_data.atom_points) + trans_pts + list(aligned_coords[1:])
+        combined_types = list(combined_data.atom_types) + trans_tps + list(next_data.atom_types[1:])
+        combined_energies = list(combined_data.energies) +  [combined_data.energies[-1]] * len(trans_pts) + list(shifted_energies[1:])
 
         combined_data = MoleculeData(
             atom_points=combined_points,
@@ -1281,7 +1306,7 @@ ver_no = 1.2
 @click.option('--log', is_flag=True, help='Provide log File')
 
 @click.option('--obj_name', '-n', default='mol',
-              help='object name, default "mol" ') 
+              help='object name, default "mol" (POV-Ray only)') 
 @click.option('--fname', '-f', default='output',
               help='output file name or base name') 
 @click.option('--split', default='none', type=click.Choice(['none','orca', 'nw', 'psi4']), 
@@ -1290,7 +1315,12 @@ ver_no = 1.2
 @click.option('--rev', '-r', multiple=True, type=int, default=None,
               help='Indices of files to reverse, e.g. -r 0 -r 2 will reverse first and third file')
 
-def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
+@click.option('--bridge', '-b', type=int, default=10,
+              help='No. of bridging points (default 10) added for smooth transition if rmsd>0.2')
+@click.option('--threshold', '-t', type=float, default=0.2,
+              help='RMSD threshold for adding bridging points (default 0.2).')
+
+def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split, bridge, threshold):
     # Data Import
     all_datasets = []
     log_data = []
@@ -1318,7 +1348,7 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
             combined_data = all_datasets[0]
             # No alignment/mapping needed, jump straight to export
     else:  # multiple inputs
-        combined_data, alignment_rmsds, log_ = chain_alignment(all_datasets)
+        combined_data, alignment_rmsds, log_ = chain_alignment(all_datasets, bridge, threshold)
         log_data.append("Alignment:")
         log_data.extend(log_)
 
