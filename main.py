@@ -94,7 +94,7 @@ def get_optimal_cores():
         try:
             # try to find performance cores
             output = subprocess.check_output(['sysctl', '-n', 'hw.perflevel0.physicalcpu'], 
-                                           stderr=subprocess.DEVNULL) # Fehler im Hintergrund halten
+                                           stderr=subprocess.DEVNULL) # suppress error messages
             return max(1, int(output.strip()))
         except Exception:
             # Fallback
@@ -808,7 +808,7 @@ def export_pov_mol(points, atom_types,cov_radii=None, default_radius=None,
 #### export Blender multi ####
 class ExportWorker(QThread):
     progress = Signal(int)  # Signal for progressbar (0-100)   
-    finished = Signal(bool, str, str) # Signal, after completion
+    finished = Signal(bool, str) # Signal, after completion
 
     def __init__(self, tasks, base_name, obj_prefix, script_name):
         super().__init__()
@@ -836,13 +836,13 @@ class ExportWorker(QThread):
             futures = [self.executor.submit(export_single_frame, t) for t in self.tasks]
             for _ in as_completed(futures):
                 if not self._is_running:
-                    self.finished.emit(False, self.obj_prefix, self.script_name)
+                    self.finished.emit(False, self.script_name)
                     return
                 
                 completed += 1
                 self.progress.emit(int((completed / length) * 100))
         
-        self.finished.emit(True, self.obj_prefix, self.script_name)
+        self.finished.emit(True, self.script_name)
 
 def get_radius_by_group(atomic_number):
     # Definition of Atom Radii
@@ -933,7 +933,7 @@ def export_single_frame(args):
     pl.close()
     return file_path
 
-def generate_blender_script_multi(obj_prefix, script_name, ver_no):
+def generate_blender_script_multi(script_name, ver_no):
     """
     Generates a Blender Python script to batch-import multiple GLB files
     and sequence them in the timeline (One frame per file).
@@ -946,8 +946,9 @@ def generate_blender_script_multi(obj_prefix, script_name, ver_no):
     
     blender_script = f"""# created with MolAlign {ver_no} by (C) 2026 Dr. Tobias Schulz
 # ==============================================================================
-# USER GUIDE for MolAlign Blender Animation
+# USER GUIDE for MolVista Blender Animation
 # ==============================================================================
+# A) Run This Script in Blender
 # 1. GLOBAL VISUAL CONTROL: 
 #    This script links all imported meshes to "MASTER" materials in your template.
 #    Edit these materials in the 'Material Properties' tab to update ALL frames:
@@ -961,86 +962,103 @@ def generate_blender_script_multi(obj_prefix, script_name, ver_no):
 # 3. POSITIONING:
 #    Select the 'TRAJECTORY_CONTROL' (Empty) to move, rotate, or scale the 
 #    entire animation sequence simultaneously over your scene.
+# 
+# B) CLEANUP: Search 'Camera Node' and other empty objects in Outliner -> Select all (A) 
+#    -> Right Click -> 'Delete Hierarchy'. This removes Cameras but keeps Meshes.
 # ==============================================================================
+ 
+import bpy, os, re
 
-import bpy
-import os, re
-
-# --- Settings ---
-obj_prefix = "{obj_prefix}"
-frame_pattern = re.compile(f'{{obj_prefix}}_(\\\\d+)$')
-
-blend_file_path = bpy.data.filepath
-if blend_file_path:
-    path_to_glb = os.path.dirname(blend_file_path)
-else:
-    # Fallback to the absolute path where it was created
-    path_to_glb = "{clean_folder}" 
+path_to_glb = "{clean_folder}"
 extension = ".glb"
 
-# 1. Clean-up (Protect template and master dummies)
-protected = ["Camera", "Plane", "Cylinder", "Sun", "World", "TRAJECTORY_CONTROL", "MASTER", "DUMMY"]
+# 1. Initial Cleanup - Protects "MASTER" oder "DUMMY" etc.
+protected_keywords = ["Camera", "Plane", "Cylinder", "Sun", "World", "TRAJECTORY_CONTROL", "MASTER", "DUMMY"]
+
+# Collect elements to delete
+to_delete = []
 for obj in bpy.data.objects:
-    if not any(p in obj.name for p in protected):
+    is_protected = any(p.upper() in obj.name.upper() for p in protected_keywords)
+    if not is_protected:
+        to_delete.append(obj)
+
+for obj in to_delete:
+    try:
         bpy.data.objects.remove(obj, do_unlink=True)
+    except:
+        pass
 
-# 2. Control Object
-if "TRAJECTORY_CONTROL" in bpy.data.objects:
-    control_obj = bpy.data.objects["TRAJECTORY_CONTROL"]
+# 2. Controller Setup
+if "TRAJECTORY_CONTROL" not in bpy.data.objects:
+    cntrl = bpy.data.objects.new("TRAJECTORY_CONTROL", None)
+    bpy.context.scene.collection.objects.link(cntrl)
 else:
-    control_obj = bpy.data.objects.new("TRAJECTORY_CONTROL", None)
-    bpy.context.collection.objects.link(control_obj)
+    cntrl = bpy.data.objects["TRAJECTORY_CONTROL"]
 
-# Find and sort all Files
+# 3. File Discovery
 files = sorted([f for f in os.listdir(path_to_glb) if f.endswith(extension)])
 
+# 4. Import Loop
 for i, filename in enumerate(files):
     filepath = os.path.join(path_to_glb, filename)
     bpy.ops.import_scene.gltf(filepath=filepath)
-    imported_objs = bpy.context.selected_objects
     
-    current_frame = i + 1
+    new_objs = [o for o in bpy.context.selected_objects if o.type == 'MESH']
+    current_frame = i + 1 
 
-    for obj in imported_objs:
-        match = frame_pattern.match(obj.name)
-        if match: 
-            obj.parent = control_obj
-            
-            # --- Master Material Linking ---
-            # Look for MASTER_Molecule in the template and assign it
-            master_mat = bpy.data.materials.get("MASTER_Molecule")
-            if master_mat:
-                obj.data.materials.clear()
-                obj.data.materials.append(master_mat)
-            
-            # --- Set KEYFRAMES (Visibility) ---
-            if current_frame > 1:
-                obj.hide_viewport = True
-                obj.hide_render = True
-                obj.keyframe_insert(data_path="hide_viewport", frame=current_frame - 1)
-                obj.keyframe_insert(data_path="hide_render", frame=current_frame - 1)
-            
-            obj.hide_viewport = False
-            obj.hide_render = False
-            obj.keyframe_insert(data_path="hide_viewport", frame=current_frame)
-            obj.keyframe_insert(data_path="hide_render", frame=current_frame)
-            
-            obj.hide_viewport = True
-            obj.hide_render = True
-            obj.keyframe_insert(data_path="hide_viewport", frame=current_frame + 1)
-            obj.keyframe_insert(data_path="hide_render", frame=current_frame + 1)
+    for obj in new_objs:
+        # --- POSITIONING ---
+        old_matrix = obj.matrix_world.copy()
+        obj.parent = cntrl
+        obj.matrix_world = old_matrix
 
-# Adapt Timeline
+        # --- MASTER MATERIAL LINK ---
+        # Wir suchen das Master-Material
+        mat = bpy.data.materials.get("MASTER_Molecule")
+        if mat:
+            obj.data.materials.clear()
+            obj.data.materials.append(mat)
+            obj.color = mat.diffuse_color
+
+        # --- ANIMATION (Visibility via Scale) ---
+        obj.scale = (0, 0, 0)
+        obj.keyframe_insert(data_path="scale", frame=current_frame - 1)
+        
+        # Show Geometry
+        obj.scale = (1, 1, 1) if len(obj.data.vertices) > 1 else (0, 0, 0)
+        obj.keyframe_insert(data_path="scale", frame=current_frame)
+        
+        obj.scale = (0, 0, 0)
+        obj.keyframe_insert(data_path="scale", frame=current_frame + 1)
+        
+        # Constant Interpolation
+        if obj.animation_data and obj.animation_data.action:
+            action = obj.animation_data.action
+            if hasattr(action, "fcurves"):
+                for fc in action.fcurves:
+                    for kp in fc.keyframe_points:
+                        kp.interpolation = 'CONSTANT'
+    
+    # Cleanup leere Nodes aus dem GLTF Import (Nodes/Empties)
+    for o in bpy.context.selected_objects:
+        if o.type != 'MESH':
+            # Nur löschen, wenn es nicht unser geschützter Controller ist
+            if not any(p.upper() in o.name.upper() for p in protected_keywords):
+                bpy.data.objects.remove(o, do_unlink=True)
+
+# 5. Final Scene Sync
+bpy.context.scene.frame_start = 1
 bpy.context.scene.frame_end = len(files)
 bpy.context.scene.frame_set(1)
-print(f"Finished! {{len(files)}} Frames processed and linked to MASTER_Molecule.")
+print(f"Sync complete. Master-Dummies preserved. {{len(files)}} frames processed.")
 """
     with open(script_path, "w") as f:
         f.write(blender_script)
 
-def on_export_finished(success, obj_prefix, script_name):
+
+def on_export_finished(success, script_name):
         if success:
-            generate_blender_script_multi(obj_prefix, script_name, ver_no)
+            generate_blender_script_multi(script_name, ver_no)
             print(f"Blender multi file export done")
         else:
             print(f"Export cancelled", "warning")
@@ -1054,7 +1072,7 @@ def update_progress(val):
 
 #### export Blender one ####
 class OneFileExportWorker(QThread): # One File
-    finished = Signal(bool, str, str) # Variables: Success, Path
+    finished = Signal(bool, str) # Variables: Success, Path
 
     def __init__(self, data, base_name, name, cpk, radii, def_rad, script_name):
         super().__init__()
@@ -1083,27 +1101,27 @@ class OneFileExportWorker(QThread): # One File
                 
             pl.export_gltf(f"{self.base_name}.glb")
             pl.close()
-            self.finished.emit(True, self.name, self.script_name)
+            self.finished.emit(True, self.script_name)
         except Exception as e:
-            self.finished.emit(False, self.name, self.script_name)
+            self.finished.emit(False, self.script_name)
 
-def on_one_file_finished(success, name, s_name):
+def on_one_file_finished(success, s_name):
     if success:
-        generate_blender_script(name, s_name, ver_no) 
+        generate_blender_script_one(s_name, ver_no) 
         print(f"Success: Blender One File Export finished")
     else:
         print("Error: GLB export failed.")
 
-def generate_blender_script(obj_prefix, script_name, ver_no):
-    
+def generate_blender_script_one(script_name, ver_no):
+        
     current_path = os.getcwd()
-    
     script_path = os.path.join(current_path, script_name)
 
     blender_script = f"""# created with MolAlign {ver_no} by (C) 2026 Dr. Tobias Schulz
 # ==============================================================================
 # USER GUIDE for MolVista Blender Animation
 # ==============================================================================
+# A) Run This Script in Blender
 # 1. GLOBAL VISUAL CONTROL: 
 #    This script links all imported meshes to "MASTER" materials in your template.
 #    Edit these materials in the 'Material Properties' tab to update ALL frames:
@@ -1118,60 +1136,71 @@ def generate_blender_script(obj_prefix, script_name, ver_no):
 #    Select the 'TRAJECTORY_CONTROL' (Empty) to move, rotate, or scale the 
 #    entire animation sequence simultaneously over your scene.
 # ==============================================================================
+ 
+import bpy, re, os
 
-import bpy, re
-# --- Settings ---
-obj_prefix = "{obj_prefix}"
-# Regex to find objects with index: prefix_001, prefix_002...
-frame_pattern = re.compile(f'{{obj_prefix}}_(\\\\d+)$')
+# --- Helper: Natural Sort ---
+def natural_key(text):
+    return [int(c) if c.isdigit() else c.lower() for c in re.split('(\\\\d+)', text)]
 
-# 1. Clean-up & Master Protection
-protected = ["Camera", "Plane", "Cylinder", "Sun", "World", "TRAJECTORY_CONTROL", "MASTER", "DUMMY"]
-for obj in bpy.data.objects:
-    if not any(p in obj.name for p in protected) and not frame_pattern.match(obj.name):
-        bpy.data.objects.remove(obj, do_unlink=True)
+# 1. Protection & Controller Setup
+protected_keywords = ["Camera", "Plane", "Cylinder", "Sun", "World", "TRAJECTORY_CONTROL", "MASTER", "DUMMY"]
 
-# 2. Control Object
 if "TRAJECTORY_CONTROL" not in bpy.data.objects:
     cntrl = bpy.data.objects.new("TRAJECTORY_CONTROL", None)
     bpy.context.collection.objects.link(cntrl)
+    cntrl.empty_display_type = 'ARROWS'
 else:
     cntrl = bpy.data.objects["TRAJECTORY_CONTROL"]
 
-# 3. Process existing objects (All frames are already in the scene after GLB import)
-frames = {{}}
+# 2. THE DUMMY KILLER: Hide all template dummies from the start
 for obj in bpy.data.objects:
-    match = frame_pattern.match(obj.name)
-    if match:
-        idx = int(match.group(1))
-        frames[idx] = obj
-        obj.parent = cntrl
-        
-        # Link to MASTER material
-        master_mat = bpy.data.materials.get("MASTER_Molecule")
-        if master_mat:
-            obj.data.materials.clear()
-            obj.data.materials.append(master_mat)
+    if "DUMMY" in obj.name.upper():
+        obj.scale = (0, 0, 0)
+        obj.hide_render = True
 
-# 4. Create Animation
-for idx, obj in frames.items():
-    target_frame = idx + 1
-    # Visibility via Scale
-    obj.scale = (0,0,0)
+# 3. Collect and Sort all imported Meshes
+all_meshes = [o for o in bpy.data.objects if o.type == 'MESH' and not any(p.upper() in o.name.upper() for p in protected_keywords)]
+all_meshes.sort(key=lambda o: natural_key(o.name))
+
+# 4. Master Material Link & Animation
+master_mat = bpy.data.materials.get("MASTER_Molecule")
+
+for i, obj in enumerate(all_meshes):
+    target_frame = i + 1 
+    
+    # Parenting & Transform-Fix
+    obj.parent = cntrl
+    obj.matrix_parent_inverse = cntrl.matrix_world.inverted()
+    
+    if master_mat:
+        obj.data.materials.clear()
+        obj.data.materials.append(master_mat)
+
+    # --- Animation (Visibility via Scale) ---
+    obj.scale = (0, 0, 0)
     obj.keyframe_insert(data_path="scale", frame=target_frame - 1)
-    obj.scale = (1,1,1)
+    
+    # Show Geometry
+    obj.scale = (1, 1, 1) if len(obj.data.vertices) > 0 else (0, 0, 0)
     obj.keyframe_insert(data_path="scale", frame=target_frame)
-    obj.scale = (0,0,0)
+    
+    obj.scale = (0, 0, 0)
     obj.keyframe_insert(data_path="scale", frame=target_frame + 1)
     
     # Constant interpolation
     if obj.animation_data and obj.animation_data.action:
-        for fc in obj.animation_data.action.fcurves:
-            for kp in fc.keyframe_points: kp.interpolation = 'CONSTANT'
+        act = obj.animation_data.action
+        if hasattr(act, "fcurves"):
+            for fc in act.fcurves:
+                for kp in fc.keyframe_points:
+                    kp.interpolation = 'CONSTANT'
 
-if frames:
-    bpy.context.scene.frame_end = max(frames.keys()) + 1
+# 5. Scene Finalize
+if all_meshes:
+    bpy.context.scene.frame_end = len(all_meshes)
     bpy.context.scene.frame_set(1)
+    print(f"One-File Sync complete: {{len(all_meshes)}} Frames ready. Dummies hidden.")
 """
     with open(script_path, "w") as f:
         f.write(blender_script)
@@ -1372,8 +1401,8 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
 
         # local Event-Loop, wait for 'finished' 
         loop = QEventLoop()
-        worker.finished.connect(lambda success, obj_prefix, script_name: [
-            on_export_finished(success, obj_prefix, script_name), 
+        worker.finished.connect(lambda success, script_name: [
+            on_export_finished(success, script_name), 
             loop.quit(),
             pbar.close()
         ])
@@ -1397,8 +1426,8 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
                 cov_radii, default_radius, script_name)
         
         loop = QEventLoop()
-        one_worker.finished.connect(lambda success, obj_name, script_name: [
-            on_one_file_finished(success, obj_name, script_name), 
+        one_worker.finished.connect(lambda success, script_name: [
+            on_one_file_finished(success, script_name), 
             loop.quit()
         ])
         
