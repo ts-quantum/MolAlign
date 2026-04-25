@@ -1,7 +1,23 @@
 # MolAlign 
-import sys, os, re
+import sys, os, re, platform
 
-import platform, subprocess, psutil, click
+if platform.system() != "Darwin":
+    os.environ.update({
+    'MESA_DEBUG': 'silent',
+    'LIBGL_DEBUG': 'quiet',
+    'EGL_LOG_LEVEL': 'fatal',
+    'VTK_SILENT': '1',
+    'QT_QPA_PLATFORM': 'offscreen'
+    })
+    import vtk
+    import pyvista as pv
+    vtk.vtkObject.GlobalWarningDisplayOff()
+    vtk.vtkLogger.SetStderrVerbosity(vtk.vtkLogger.VERBOSITY_OFF)
+
+    pv.OFF_SCREEN = True
+    pv.global_theme.allow_empty_mesh = True
+    
+import subprocess, psutil, click
 from tqdm import tqdm
 import pyvista as pv
 from collections import defaultdict
@@ -1293,7 +1309,7 @@ cov_radii = {
 default_radius = 1.0
 
 # Version:
-ver_no = 1.2
+ver_no = 1.3
 
 @click.command(context_settings=dict(ignore_unknown_options=True))
 @click.argument('files', nargs=-1) # 'e.g. file1.xyz file2.xyz ...'
