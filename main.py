@@ -969,7 +969,7 @@ def generate_blender_script_multi(script_name, ver_no):
     script_path = os.path.join(current_path, script_name)
     clean_folder = current_path.replace('\\', '/')
     
-    blender_script = f"""# created with MolAlign {ver_no} by (C) 2026 Dr. Tobias Schulz
+    blender_script = f"""# created with MolAlign {ver_no} (C) 2026 by  Dr. Tobias Schulz
 # ==============================================================================
 # USER GUIDE for MolVista Blender Animation
 # ==============================================================================
@@ -1080,7 +1080,6 @@ print(f"Sync complete. Master-Dummies preserved. {{len(files)}} frames processed
     with open(script_path, "w") as f:
         f.write(blender_script)
 
-
 def on_export_finished(success, script_name):
         if success:
             generate_blender_script_multi(script_name, ver_no)
@@ -1142,7 +1141,7 @@ def generate_blender_script_one(script_name, ver_no):
     current_path = os.getcwd()
     script_path = os.path.join(current_path, script_name)
 
-    blender_script = f"""# created with MolAlign {ver_no} by (C) 2026 Dr. Tobias Schulz
+    blender_script = f"""# created with MolAlign {ver_no} (C) 2026 by Dr. Tobias Schulz
 # ==============================================================================
 # USER GUIDE for MolVista Blender Animation
 # ==============================================================================
