@@ -402,7 +402,7 @@ def chain_alignment(all_datasets, bridging_pts=10, threshold=0.2):
         if rmsd >= threshold:
             log.append(f"Kabsch Alignment RMSD={rmsd:.4f} - poor fit")
             if bridging_pts > 0:
-                log.append(f"{bridging_pts}Bridging Points are added for smooth transition at junction")
+                log.append(f"{bridging_pts} Bridging Points are added for smooth transition at junction")
         elif rmsd < threshold:
             log.append(f"Kabsch Alignment RMSD={rmsd:.4f} - excellent fit")
         log.append(f"Kabsch Alignment rotation: X={angles[0]:.2f}°, Y={angles[1]:.2f}°, Z={angles[2]:.2f}°")
@@ -1331,7 +1331,7 @@ ver_no = 1.3
               help='Indices of files to reverse, e.g. -r 0 -r 2 will reverse first and third file')
 
 @click.option('--bridge', '-b', type=int, default=10,
-              help='No. of bridging points (default 10) added for smooth transition if rmsd>0.2')
+              help='No. of bridging points (default 10) added for smooth transition if RMSD exceeds the threshold')
 @click.option('--threshold', '-t', type=float, default=0.2,
               help='RMSD threshold for adding bridging points (default 0.2).')
 

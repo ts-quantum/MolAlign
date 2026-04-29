@@ -99,5 +99,5 @@ object {axis rotate y*-90 scale z*1 }
 #include "irc.inc"
 #declare K=clock;
 
-object { molecule[K]  scale 0.75 rotate x*60 rotate y*-90 translate <5,3,2>}
+object { mol[K]  scale 0.75 rotate x*60 rotate y*-90 translate <5,3,2>}
 

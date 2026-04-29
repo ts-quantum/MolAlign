@@ -1,0 +1,25 @@
+MolAlign 1.3 (C) 2026 Dr. Tobias Schulz
+Batch Processing Log
+============================
+
+Input files: ('ts14.irc_IRC_Full_trj.xyz', 'ts43.irc_IRC_Full_trj.xyz')
+Alignment:
+pre-check with first and second segment
+Atom re-ordering detected: 15 atoms rearranged to match reference.
+second segment reversed
+Loop over all segments
+Step 1
+Best alignment strategy: normal (RMSD: 1.4814 Å)
+Atom re-ordering detected: 15 atoms rearranged to match reference.
+Alignment step 1, dataset ts43.irc_IRC_Full_trj.xyz
+Kabsch Alignment RMSD=0.2361 - poor fit
+10 Bridging Points are added for smooth transition at junction
+Kabsch Alignment rotation: X=-133.87°, Y=6.84°, Z=96.82°
+Kabsch ref. translation x=0.00 y=-0.00 z=0.00
+Kabsch target translation x=0.41 y=-1.08 z=1.36
+
+[DONE] Trajektory with 307 Frames created.
+[INFO] Average RMSD: 0.2361 Å (Max: 0.2361 Å)
+[WARN] High RMSDs detected, Check Geometry
+Blender One File export complete, irc.glb
+Blender Import and Animate Script written to import_and_animate.py

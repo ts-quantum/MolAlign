@@ -1,7 +1,7 @@
-MolAlign 1.2 (C) 2026 Dr. Tobias Schulz
+MolAlign 1.3 (C) 2026 Dr. Tobias Schulz
 Batch Processing Log
 ============================
 
-Input files: ('../ts1.irc_IRC_Full_trj.xyz',)
+Input files: ('ts1.irc_IRC_Full_trj.xyz',)
 xyz data ts1.irc_IRC_Full_trj.xyz written as: ts1.xyz
 Batch template created: ts1_split.py

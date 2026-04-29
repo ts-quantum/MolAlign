@@ -1,4 +1,4 @@
-# created with MolAlign 1.2 by (C) 2026 Dr. Tobias Schulz
+# created with MolAlign 1.3 (C) 2026 by Dr. Tobias Schulz
 # ==============================================================================
 # USER GUIDE for MolVista Blender Animation
 # ==============================================================================

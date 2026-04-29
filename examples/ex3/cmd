@@ -1,1 +1,6 @@
-python3 ../../main.py ts.ircf.xyz ts.ircb.xyz --xyz --bld --pov -f irc --log --split psi4
+
+python3 ../../../main.py ../04_irc/{ts.ircf.xyz,ts.ircb.xyz} --xyz -f irc --log --split psi4
+
+python3 ../../../main.py ../04_irc/{ts.ircf.xyz,ts.ircb.xyz} -f irc --log --pov 
+
+python3 ../../../main.py ../04_irc/{ts.ircf.xyz,ts.ircb.xyz} -f irc --log --bld

@@ -1,5 +1,5 @@
 # --- CONFIGURATION: ADJUST BEFORE RUNNING ---
-##### created by MolAlign 1.1 (C) 2026 by Dr. Tobias Schulz
+##### created by MolAlign 1.3 (C) 2026 by Dr. Tobias Schulz
 ##### This Python Script to run a Psi-4 single point calculation
 ##### for each point on a given IRC Trajectory and to produce a 
 ##### .molden and .fchk file for each point
