@@ -1437,7 +1437,7 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split, bridge
             for i in range(len(raw_points))
         ]
 
-        click.echo("Bld Export startet... ")
+        click.echo("Bld Export started... ")
         #initialize tqdm
         pbar = tqdm(total=100, desc="Exporting Blender Frames", unit="%")
     
@@ -1460,7 +1460,7 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split, bridge
         log_data.append(f"Blender Import and Animate Script written to {script_name}")
 
     if bld_one:
-        click.echo("Bld One File Export startet... ")
+        click.echo("Bld One File Export started... ")
         app = QCoreApplication.instance() or QCoreApplication([])
 
         base_name = fname
