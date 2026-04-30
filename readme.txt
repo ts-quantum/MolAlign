@@ -105,12 +105,12 @@ Example 1: 2-Chlorocyclohexane Ring Flip (NWChem Workflow) B3LYP/6-31G, [1]
     --log: Generates a detailed processing log.
     Results:
     Cyhex.xyz: The full, combined reaction trajectory.
-    Cyhex.inc: A POV-Ray [4] include file containing all structures. You can call specific frames in your .pov file using the cyhex array.
-               combine all rendered frames e.g. with FFmpeg [5]
+    Cyhex.inc: A POV-Ray [5] include file containing all structures. You can call specific frames in your .pov file using the cyhex array.
+               combine all rendered frames e.g. with FFmpeg [6]
     Cyhex.log: Log file documenting the alignment and merging process.
     Visualization: See test1.pov for a ready-to-render setup using the generated include file.
     
-    to generate the corresponding Blender [3] input use: 
+    to generate the corresponding Blender [4] input use: 
     python3 ../../../main.py ../{2.irc.fxyz,2.irc.bxyz,4.irc.fxyz,4.irc.bxyz,6.irc.fxyz,6.irc.bxyz} --xyz --bld-one --fname Cyhex --log 
 
 [1] E. Aprà, D. Mejía-Rodríguez, et al., "NWChem: Recent and Ongoing Developments", J. Chem. Theory Comput., 
@@ -147,9 +147,9 @@ Example 3: 1-5-H-Shift (Splitting for BatchMol) B3LYP/cc-pVDZ
     irc_split.py: A script to create .molden and .fchk files for BatchMol 
     (enabling ESP or MO visualization along the pathway).
     Blender Assets: Individual .glb files for each step of the pathway, 
-    including an irc_animate.py script for automated processing in Blender [3].
-    POV-Ray Files [4]: An .inc file containing a molecule array over the reaction path, 
-    along with the corresponding input/ini files and the final rendered MP4 video [5].
+    including an irc_animate.py script for automated processing in Blender [4].
+    POV-Ray Files [5]: An .inc file containing a molecule array over the reaction path, 
+    along with the corresponding input/ini files and the final rendered MP4 video [6].
     Blender glb Files (Multi): import all .glb files (glb.tar.gz) in Blender and process using
     the 'import_and_animate.py'
 [3] D. G. A. Smith, L. A. Burns, et al., "Psi4 1.4: Open-source software for high-throughput quantum chemistry", 
@@ -168,7 +168,7 @@ Example 4: Rearrangement of Protonated COT to Methyl-Tropylium (Atom Reordering)
   Note: due to poor RMSD 10 bridging points have been interpolated to prevent any jumps during the animation
   python3 ../../main.py ts14*xyz ts43*xyz -f irc --log --bld-one
 
-  Export & Rendering: [3], [4], [5]
+  Export & Rendering: [4], [5], [6]
   The export and rendering process utilizes a Blender template, movie_template.blend, which provides pre-configured 
   lighting and cameras for visualizing the irc.glb trajectory data. After importing the file, the script import_and_animate.py 
   links the molecular meshes to the animation timeline, with optional adjustments available for global scale and material 
@@ -178,9 +178,9 @@ Example 4: Rearrangement of Protonated COT to Methyl-Tropylium (Atom Reordering)
 15, e70019 (2025). doi: 10.1002/wcms.70019.
 
 # Rendering Software:
-[3] Blender Foundation (2026). Blender (Version 5.1): Cycles Rendering Engine [Computer software]. Retrieved from blender.org
-[4] POV-Ray Team (2013). Persistence of Vision Raytracer (Version 3.7) [Computer software]. GNU Affero General Public License. Retrieved from povray.org
-[5] Tomar, S. (2006). Converting video formats with FFmpeg. Linux Journal, 2006(146), 10.
+[4] Blender Foundation (2026). Blender (Version 5.1): Cycles Rendering Engine [Computer software]. Retrieved from blender.org
+[5] POV-Ray Team (2013). Persistence of Vision Raytracer (Version 3.7) [Computer software]. GNU Affero General Public License. Retrieved from povray.org
+[6] Tomar, S. (2006). Converting video formats with FFmpeg. Linux Journal, 2006(146), 10.
 
 ## Installation
 
