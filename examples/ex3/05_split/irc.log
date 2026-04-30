@@ -1,8 +1,8 @@
-MolAlign 1.1 (C) 2026 Dr. Tobias Schulz
+MolAlign 1.3 (C) 2026 Dr. Tobias Schulz
 Batch Processing Log
 ============================
 
-Input files: ('ts.ircf.xyz', 'ts.ircb.xyz')
+Input files: ('../04_irc/ts.ircf.xyz', '../04_irc/ts.ircb.xyz')
 Alignment:
 pre-check with first and second segment
 Atom order is already consistent between segments.
@@ -12,6 +12,7 @@ Step 1
 Best alignment strategy: normal (RMSD: 0.0570 Å)
 Atom order is already consistent between segments.
 Alignment step 1, dataset ts.ircb.xyz
+Kabsch Alignment RMSD=0.0513 - excellent fit
 Kabsch Alignment rotation: X=0.24°, Y=0.02°, Z=0.35°
 Kabsch ref. translation x=-0.04 y=0.32 z=-0.03
 Kabsch target translation x=-0.04 y=0.30 z=-0.03
@@ -20,6 +21,3 @@ Kabsch target translation x=-0.04 y=0.30 z=-0.03
 [INFO] Average RMSD: 0.0513 Å (Max: 0.0513 Å)
 xyz data None written as: irc.xyz
 Batch template created: irc_split.py
-POV-Ray sequence irc.inc written
-Blender multi file export done to irc_*.glb
-Configure Script irc_animate.py created 

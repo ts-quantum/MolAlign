@@ -1,9 +1,9 @@
-// created with MolAlign 1.1 (C)2026 Dr. Tobias Schulz
+// created with MolAlign 1.3 (C)2026 Dr. Tobias Schulz
 // IRC Trajectory as Array of Molecules
-// #include "molecule.inc" into povray
-// ---- use "object{molecule[i]}" in code
+// #include "mol.inc" into povray
+// ---- use "object{mol[i]}" in code
 //declare molecule object array
-#declare molecule = array[98];
+#declare mol = array[98];
 //
 // ---- Atom and Bond Section
 //transparency
@@ -118,7 +118,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[1] = union {
+#declare mol[1] = union {
     object {AtomsGroup_1}
     object {BondsGroup_1}
 }
@@ -213,7 +213,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[2] = union {
+#declare mol[2] = union {
     object {AtomsGroup_2}
     object {BondsGroup_2}
 }
@@ -308,7 +308,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[3] = union {
+#declare mol[3] = union {
     object {AtomsGroup_3}
     object {BondsGroup_3}
 }
@@ -403,7 +403,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[4] = union {
+#declare mol[4] = union {
     object {AtomsGroup_4}
     object {BondsGroup_4}
 }
@@ -498,7 +498,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[5] = union {
+#declare mol[5] = union {
     object {AtomsGroup_5}
     object {BondsGroup_5}
 }
@@ -593,7 +593,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[6] = union {
+#declare mol[6] = union {
     object {AtomsGroup_6}
     object {BondsGroup_6}
 }
@@ -688,7 +688,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[7] = union {
+#declare mol[7] = union {
     object {AtomsGroup_7}
     object {BondsGroup_7}
 }
@@ -783,7 +783,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[8] = union {
+#declare mol[8] = union {
     object {AtomsGroup_8}
     object {BondsGroup_8}
 }
@@ -878,7 +878,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[9] = union {
+#declare mol[9] = union {
     object {AtomsGroup_9}
     object {BondsGroup_9}
 }
@@ -973,7 +973,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[10] = union {
+#declare mol[10] = union {
     object {AtomsGroup_10}
     object {BondsGroup_10}
 }
@@ -1068,7 +1068,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[11] = union {
+#declare mol[11] = union {
     object {AtomsGroup_11}
     object {BondsGroup_11}
 }
@@ -1163,7 +1163,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[12] = union {
+#declare mol[12] = union {
     object {AtomsGroup_12}
     object {BondsGroup_12}
 }
@@ -1258,7 +1258,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[13] = union {
+#declare mol[13] = union {
     object {AtomsGroup_13}
     object {BondsGroup_13}
 }
@@ -1353,7 +1353,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[14] = union {
+#declare mol[14] = union {
     object {AtomsGroup_14}
     object {BondsGroup_14}
 }
@@ -1448,7 +1448,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[15] = union {
+#declare mol[15] = union {
     object {AtomsGroup_15}
     object {BondsGroup_15}
 }
@@ -1543,7 +1543,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[16] = union {
+#declare mol[16] = union {
     object {AtomsGroup_16}
     object {BondsGroup_16}
 }
@@ -1638,7 +1638,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[17] = union {
+#declare mol[17] = union {
     object {AtomsGroup_17}
     object {BondsGroup_17}
 }
@@ -1733,7 +1733,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[18] = union {
+#declare mol[18] = union {
     object {AtomsGroup_18}
     object {BondsGroup_18}
 }
@@ -1828,7 +1828,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[19] = union {
+#declare mol[19] = union {
     object {AtomsGroup_19}
     object {BondsGroup_19}
 }
@@ -1923,7 +1923,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[20] = union {
+#declare mol[20] = union {
     object {AtomsGroup_20}
     object {BondsGroup_20}
 }
@@ -2018,7 +2018,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[21] = union {
+#declare mol[21] = union {
     object {AtomsGroup_21}
     object {BondsGroup_21}
 }
@@ -2113,7 +2113,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[22] = union {
+#declare mol[22] = union {
     object {AtomsGroup_22}
     object {BondsGroup_22}
 }
@@ -2208,7 +2208,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[23] = union {
+#declare mol[23] = union {
     object {AtomsGroup_23}
     object {BondsGroup_23}
 }
@@ -2303,7 +2303,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[24] = union {
+#declare mol[24] = union {
     object {AtomsGroup_24}
     object {BondsGroup_24}
 }
@@ -2398,7 +2398,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[25] = union {
+#declare mol[25] = union {
     object {AtomsGroup_25}
     object {BondsGroup_25}
 }
@@ -2493,7 +2493,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[26] = union {
+#declare mol[26] = union {
     object {AtomsGroup_26}
     object {BondsGroup_26}
 }
@@ -2588,7 +2588,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[27] = union {
+#declare mol[27] = union {
     object {AtomsGroup_27}
     object {BondsGroup_27}
 }
@@ -2683,7 +2683,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[28] = union {
+#declare mol[28] = union {
     object {AtomsGroup_28}
     object {BondsGroup_28}
 }
@@ -2778,7 +2778,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[29] = union {
+#declare mol[29] = union {
     object {AtomsGroup_29}
     object {BondsGroup_29}
 }
@@ -2873,7 +2873,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[30] = union {
+#declare mol[30] = union {
     object {AtomsGroup_30}
     object {BondsGroup_30}
 }
@@ -2968,7 +2968,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[31] = union {
+#declare mol[31] = union {
     object {AtomsGroup_31}
     object {BondsGroup_31}
 }
@@ -3063,7 +3063,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[32] = union {
+#declare mol[32] = union {
     object {AtomsGroup_32}
     object {BondsGroup_32}
 }
@@ -3158,7 +3158,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[33] = union {
+#declare mol[33] = union {
     object {AtomsGroup_33}
     object {BondsGroup_33}
 }
@@ -3253,7 +3253,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[34] = union {
+#declare mol[34] = union {
     object {AtomsGroup_34}
     object {BondsGroup_34}
 }
@@ -3348,7 +3348,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[35] = union {
+#declare mol[35] = union {
     object {AtomsGroup_35}
     object {BondsGroup_35}
 }
@@ -3443,7 +3443,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[36] = union {
+#declare mol[36] = union {
     object {AtomsGroup_36}
     object {BondsGroup_36}
 }
@@ -3538,7 +3538,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[37] = union {
+#declare mol[37] = union {
     object {AtomsGroup_37}
     object {BondsGroup_37}
 }
@@ -3633,7 +3633,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[38] = union {
+#declare mol[38] = union {
     object {AtomsGroup_38}
     object {BondsGroup_38}
 }
@@ -3728,7 +3728,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[39] = union {
+#declare mol[39] = union {
     object {AtomsGroup_39}
     object {BondsGroup_39}
 }
@@ -3823,7 +3823,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[40] = union {
+#declare mol[40] = union {
     object {AtomsGroup_40}
     object {BondsGroup_40}
 }
@@ -3918,7 +3918,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[41] = union {
+#declare mol[41] = union {
     object {AtomsGroup_41}
     object {BondsGroup_41}
 }
@@ -4013,7 +4013,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[42] = union {
+#declare mol[42] = union {
     object {AtomsGroup_42}
     object {BondsGroup_42}
 }
@@ -4108,7 +4108,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[43] = union {
+#declare mol[43] = union {
     object {AtomsGroup_43}
     object {BondsGroup_43}
 }
@@ -4203,7 +4203,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[44] = union {
+#declare mol[44] = union {
     object {AtomsGroup_44}
     object {BondsGroup_44}
 }
@@ -4298,7 +4298,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[45] = union {
+#declare mol[45] = union {
     object {AtomsGroup_45}
     object {BondsGroup_45}
 }
@@ -4393,7 +4393,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[46] = union {
+#declare mol[46] = union {
     object {AtomsGroup_46}
     object {BondsGroup_46}
 }
@@ -4492,7 +4492,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[47] = union {
+#declare mol[47] = union {
     object {AtomsGroup_47}
     object {BondsGroup_47}
 }
@@ -4591,7 +4591,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[48] = union {
+#declare mol[48] = union {
     object {AtomsGroup_48}
     object {BondsGroup_48}
 }
@@ -4690,7 +4690,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[49] = union {
+#declare mol[49] = union {
     object {AtomsGroup_49}
     object {BondsGroup_49}
 }
@@ -4789,7 +4789,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[50] = union {
+#declare mol[50] = union {
     object {AtomsGroup_50}
     object {BondsGroup_50}
 }
@@ -4888,7 +4888,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[51] = union {
+#declare mol[51] = union {
     object {AtomsGroup_51}
     object {BondsGroup_51}
 }
@@ -4987,7 +4987,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[52] = union {
+#declare mol[52] = union {
     object {AtomsGroup_52}
     object {BondsGroup_52}
 }
@@ -5086,7 +5086,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[53] = union {
+#declare mol[53] = union {
     object {AtomsGroup_53}
     object {BondsGroup_53}
 }
@@ -5185,7 +5185,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[54] = union {
+#declare mol[54] = union {
     object {AtomsGroup_54}
     object {BondsGroup_54}
 }
@@ -5284,7 +5284,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[55] = union {
+#declare mol[55] = union {
     object {AtomsGroup_55}
     object {BondsGroup_55}
 }
@@ -5379,7 +5379,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[56] = union {
+#declare mol[56] = union {
     object {AtomsGroup_56}
     object {BondsGroup_56}
 }
@@ -5474,7 +5474,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[57] = union {
+#declare mol[57] = union {
     object {AtomsGroup_57}
     object {BondsGroup_57}
 }
@@ -5569,7 +5569,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[58] = union {
+#declare mol[58] = union {
     object {AtomsGroup_58}
     object {BondsGroup_58}
 }
@@ -5664,7 +5664,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[59] = union {
+#declare mol[59] = union {
     object {AtomsGroup_59}
     object {BondsGroup_59}
 }
@@ -5759,7 +5759,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[60] = union {
+#declare mol[60] = union {
     object {AtomsGroup_60}
     object {BondsGroup_60}
 }
@@ -5854,7 +5854,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[61] = union {
+#declare mol[61] = union {
     object {AtomsGroup_61}
     object {BondsGroup_61}
 }
@@ -5949,7 +5949,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[62] = union {
+#declare mol[62] = union {
     object {AtomsGroup_62}
     object {BondsGroup_62}
 }
@@ -6044,7 +6044,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[63] = union {
+#declare mol[63] = union {
     object {AtomsGroup_63}
     object {BondsGroup_63}
 }
@@ -6139,7 +6139,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[64] = union {
+#declare mol[64] = union {
     object {AtomsGroup_64}
     object {BondsGroup_64}
 }
@@ -6234,7 +6234,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[65] = union {
+#declare mol[65] = union {
     object {AtomsGroup_65}
     object {BondsGroup_65}
 }
@@ -6329,7 +6329,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[66] = union {
+#declare mol[66] = union {
     object {AtomsGroup_66}
     object {BondsGroup_66}
 }
@@ -6424,7 +6424,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[67] = union {
+#declare mol[67] = union {
     object {AtomsGroup_67}
     object {BondsGroup_67}
 }
@@ -6519,7 +6519,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[68] = union {
+#declare mol[68] = union {
     object {AtomsGroup_68}
     object {BondsGroup_68}
 }
@@ -6614,7 +6614,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[69] = union {
+#declare mol[69] = union {
     object {AtomsGroup_69}
     object {BondsGroup_69}
 }
@@ -6709,7 +6709,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[70] = union {
+#declare mol[70] = union {
     object {AtomsGroup_70}
     object {BondsGroup_70}
 }
@@ -6804,7 +6804,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[71] = union {
+#declare mol[71] = union {
     object {AtomsGroup_71}
     object {BondsGroup_71}
 }
@@ -6899,7 +6899,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[72] = union {
+#declare mol[72] = union {
     object {AtomsGroup_72}
     object {BondsGroup_72}
 }
@@ -6994,7 +6994,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[73] = union {
+#declare mol[73] = union {
     object {AtomsGroup_73}
     object {BondsGroup_73}
 }
@@ -7089,7 +7089,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[74] = union {
+#declare mol[74] = union {
     object {AtomsGroup_74}
     object {BondsGroup_74}
 }
@@ -7184,7 +7184,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[75] = union {
+#declare mol[75] = union {
     object {AtomsGroup_75}
     object {BondsGroup_75}
 }
@@ -7279,7 +7279,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[76] = union {
+#declare mol[76] = union {
     object {AtomsGroup_76}
     object {BondsGroup_76}
 }
@@ -7374,7 +7374,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[77] = union {
+#declare mol[77] = union {
     object {AtomsGroup_77}
     object {BondsGroup_77}
 }
@@ -7469,7 +7469,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[78] = union {
+#declare mol[78] = union {
     object {AtomsGroup_78}
     object {BondsGroup_78}
 }
@@ -7564,7 +7564,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[79] = union {
+#declare mol[79] = union {
     object {AtomsGroup_79}
     object {BondsGroup_79}
 }
@@ -7659,7 +7659,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[80] = union {
+#declare mol[80] = union {
     object {AtomsGroup_80}
     object {BondsGroup_80}
 }
@@ -7754,7 +7754,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[81] = union {
+#declare mol[81] = union {
     object {AtomsGroup_81}
     object {BondsGroup_81}
 }
@@ -7849,7 +7849,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[82] = union {
+#declare mol[82] = union {
     object {AtomsGroup_82}
     object {BondsGroup_82}
 }
@@ -7944,7 +7944,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[83] = union {
+#declare mol[83] = union {
     object {AtomsGroup_83}
     object {BondsGroup_83}
 }
@@ -8039,7 +8039,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[84] = union {
+#declare mol[84] = union {
     object {AtomsGroup_84}
     object {BondsGroup_84}
 }
@@ -8134,7 +8134,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[85] = union {
+#declare mol[85] = union {
     object {AtomsGroup_85}
     object {BondsGroup_85}
 }
@@ -8229,7 +8229,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[86] = union {
+#declare mol[86] = union {
     object {AtomsGroup_86}
     object {BondsGroup_86}
 }
@@ -8324,7 +8324,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[87] = union {
+#declare mol[87] = union {
     object {AtomsGroup_87}
     object {BondsGroup_87}
 }
@@ -8419,7 +8419,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[88] = union {
+#declare mol[88] = union {
     object {AtomsGroup_88}
     object {BondsGroup_88}
 }
@@ -8514,7 +8514,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[89] = union {
+#declare mol[89] = union {
     object {AtomsGroup_89}
     object {BondsGroup_89}
 }
@@ -8609,7 +8609,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[90] = union {
+#declare mol[90] = union {
     object {AtomsGroup_90}
     object {BondsGroup_90}
 }
@@ -8704,7 +8704,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[91] = union {
+#declare mol[91] = union {
     object {AtomsGroup_91}
     object {BondsGroup_91}
 }
@@ -8799,7 +8799,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[92] = union {
+#declare mol[92] = union {
     object {AtomsGroup_92}
     object {BondsGroup_92}
 }
@@ -8894,7 +8894,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[93] = union {
+#declare mol[93] = union {
     object {AtomsGroup_93}
     object {BondsGroup_93}
 }
@@ -8989,7 +8989,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[94] = union {
+#declare mol[94] = union {
     object {AtomsGroup_94}
     object {BondsGroup_94}
 }
@@ -9084,7 +9084,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[95] = union {
+#declare mol[95] = union {
     object {AtomsGroup_95}
     object {BondsGroup_95}
 }
@@ -9179,7 +9179,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[96] = union {
+#declare mol[96] = union {
     object {AtomsGroup_96}
     object {BondsGroup_96}
 }
@@ -9274,7 +9274,7 @@
   }
 }
 // Combine Atoms, Bonds and Mesh 
-#declare molecule[97] = union {
+#declare mol[97] = union {
     object {AtomsGroup_97}
     object {BondsGroup_97}
 }

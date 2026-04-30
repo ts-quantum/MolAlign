@@ -1,7 +1,23 @@
 # MolAlign 
-import sys, os, re
+import sys, os, re, platform
 
-import platform, subprocess, psutil, click
+if platform.system() != "Darwin":
+    os.environ.update({
+    'MESA_DEBUG': 'silent',
+    'LIBGL_DEBUG': 'quiet',
+    'EGL_LOG_LEVEL': 'fatal',
+    'VTK_SILENT': '1',
+    'QT_QPA_PLATFORM': 'offscreen'
+    })
+    import vtk
+    import pyvista as pv
+    vtk.vtkObject.GlobalWarningDisplayOff()
+    vtk.vtkLogger.SetStderrVerbosity(vtk.vtkLogger.VERBOSITY_OFF)
+
+    pv.OFF_SCREEN = True
+    pv.global_theme.allow_empty_mesh = True
+    
+import subprocess, psutil, click
 from tqdm import tqdm
 import pyvista as pv
 from collections import defaultdict
@@ -94,7 +110,7 @@ def get_optimal_cores():
         try:
             # try to find performance cores
             output = subprocess.check_output(['sysctl', '-n', 'hw.perflevel0.physicalcpu'], 
-                                           stderr=subprocess.DEVNULL) # Fehler im Hintergrund halten
+                                           stderr=subprocess.DEVNULL) # suppress error messages
             return max(1, int(output.strip()))
         except Exception:
             # Fallback
@@ -184,8 +200,10 @@ def align_structures(ref_coords, target_coords):
 
     # 5. Calculate transformed coordinates
     aligned_coords = (target_centered @ r.T) + centroid_ref
+
+    rmsd = np.sqrt(np.mean(np.linalg.norm(ref_centered - target_centered @ r.T, axis=1)**2))
     
-    return aligned_coords, r, centroid_ref,  centroid_target
+    return aligned_coords, r, centroid_ref,  centroid_target, rmsd
 
 def transform_trajectory(trajectory_coords, r_matrix, ref_centroid, target_centroid):
     """Applies Transformation on whole trajectory"""
@@ -221,7 +239,7 @@ def find_best_flip_strategy(data0, data1):
             mapping = find_mapping(c0, c1, data0.atom_types[0], data1.atom_types[0])
             
             # Calculate RMSD after a temporary Kabsch alignment to verify the fit
-            _, R, cent0, cent1 = align_structures(c0, c1[mapping])
+            _, R, cent0, cent1, rmsd = align_structures(c0, c1[mapping])
             
             # Transform the target coordinates to the reference frame for RMSD check
             aligned_c1 = (c1[mapping] - cent1) @ R + cent0
@@ -275,7 +293,17 @@ def find_mapping(coords_ref, coords_target, types_ref, types_target):
         
         return col_ind
 
-def chain_alignment(all_datasets):
+def bridge_segments(coords_1, coords_2, types, steps=10):
+    bridge = []
+    bridge_types = []
+    for i in range(1,steps +1):
+        w = i / (steps+1)
+        interp_coords = (1-w) * coords_1 + w * coords_2
+        bridge.append(interp_coords)
+        bridge_types.append(types)
+    return bridge, bridge_types
+
+def chain_alignment(all_datasets, bridging_pts=10, threshold=0.2):
     combined_data = all_datasets[0]
     alignment_rmsds = []
     log = []
@@ -333,7 +361,7 @@ def chain_alignment(all_datasets):
             mapping = find_mapping(c0, c1, ref_frame, next_data.atom_types[0])
             
             # Calculate RMSD after a temporary Kabsch alignment to verify the fit
-            _, R, cent0, cent1 = align_structures(c0, c1[mapping])
+            _, R, cent0, cent1, _ = align_structures(c0, c1[mapping])
             
             # Transform the target coordinates to the reference frame for RMSD check
             aligned_c1 = (c1[mapping] - cent1) @ R + cent0
@@ -367,25 +395,38 @@ def chain_alignment(all_datasets):
 
         # Jetzt das (ggf. geflippte) Teil alignen und mergen
   
-        _, r, centroid_ref,  centroid_target = align_structures(ref_frame, target_frame)
+        aligned_str, r, centroid_ref,  centroid_target, rmsd = align_structures(ref_frame, target_frame)
 
         angles = get_euler_angles(r)
         log.append(f"Alignment step {i}, dataset {next_data.name}")
+        if rmsd >= threshold:
+            log.append(f"Kabsch Alignment RMSD={rmsd:.4f} - poor fit")
+            if bridging_pts > 0:
+                log.append(f"{bridging_pts} Bridging Points are added for smooth transition at junction")
+        elif rmsd < threshold:
+            log.append(f"Kabsch Alignment RMSD={rmsd:.4f} - excellent fit")
         log.append(f"Kabsch Alignment rotation: X={angles[0]:.2f}°, Y={angles[1]:.2f}°, Z={angles[2]:.2f}°")
         log.append(f"Kabsch ref. translation x={centroid_ref[0]:.2f} y={centroid_ref[1]:.2f} z={centroid_ref[2]:.2f}")
         log.append(f"Kabsch target translation x={centroid_target[0]:.2f} y={centroid_target[1]:.2f} z={centroid_target[2]:.2f}")
 
         aligned_coords = transform_trajectory(next_data.atom_points, r, centroid_ref,  centroid_target)
         
+        #bridging points for smooth transition at junction
+        trans_pts = []
+        trans_tps = []
+        if rmsd >= threshold and bridging_pts > 0:
+            # bridge segments in case of high rmsd
+            trans_pts, trans_tps = bridge_segments(ref_frame, aligned_str, combined_data.atom_types[-1], bridging_pts) 
+            
         step_rmsd = get_min_rmsd_kabsch(ref_frame, aligned_coords[0])
         alignment_rmsds.append(step_rmsd)
 
         energy_offset = combined_data.energies[-1] - next_data.energies[0]
         shifted_energies = [e + energy_offset for e in next_data.energies]
 
-        combined_points = list(combined_data.atom_points) + list(aligned_coords[1:])
-        combined_types = list(combined_data.atom_types) + list(next_data.atom_types[1:])
-        combined_energies = list(combined_data.energies) + list(shifted_energies[1:])
+        combined_points = list(combined_data.atom_points) + trans_pts + list(aligned_coords[1:])
+        combined_types = list(combined_data.atom_types) + trans_tps + list(next_data.atom_types[1:])
+        combined_energies = list(combined_data.energies) +  [combined_data.energies[-1]] * len(trans_pts) + list(shifted_energies[1:])
 
         combined_data = MoleculeData(
             atom_points=combined_points,
@@ -810,10 +851,12 @@ class ExportWorker(QThread):
     progress = Signal(int)  # Signal for progressbar (0-100)   
     finished = Signal(bool, str) # Signal, after completion
 
-    def __init__(self, tasks, base_name):
+    def __init__(self, tasks, base_name, obj_prefix, script_name):
         super().__init__()
         self.tasks = tasks
         self.base_name = base_name
+        self.obj_prefix = obj_prefix
+        self.script_name = script_name
         self._is_running = True
         self.executor = None
 
@@ -834,13 +877,13 @@ class ExportWorker(QThread):
             futures = [self.executor.submit(export_single_frame, t) for t in self.tasks]
             for _ in as_completed(futures):
                 if not self._is_running:
-                    self.finished.emit(False, self.base_name)
+                    self.finished.emit(False, self.script_name)
                     return
                 
                 completed += 1
                 self.progress.emit(int((completed / length) * 100))
         
-        self.finished.emit(True, self.base_name)
+        self.finished.emit(True, self.script_name)
 
 def get_radius_by_group(atomic_number):
     # Definition of Atom Radii
@@ -916,14 +959,14 @@ def draw_mol_bld(atom_points, atom_types, cpk_colors=None, cov_radii=None, defau
     return combined
 
 def export_single_frame(args):
-    i, atom_points, atom_types, cpk, radii, def_rad, base_name = args
+    i, atom_points, atom_types, cpk, radii, def_rad, base_name, obj_prefix= args
     
     # create geometry mesh
     mesh = draw_mol_bld(atom_points, atom_types, cpk, radii, def_rad)
     
     # export (needs plotter)
     pl = pv.Plotter(off_screen=True)
-    pl.add_mesh(mesh, scalars="RGB", rgb=True)
+    pl.add_mesh(mesh, name=f"{obj_prefix}_{i:03d}", scalars="RGB", rgb=True)
 
     file_path = f"{base_name}_{i:03d}.glb"
 
@@ -931,77 +974,134 @@ def export_single_frame(args):
     pl.close()
     return file_path
 
-def generate_blender_script_multi(base_name, ver_no):
+def generate_blender_script_multi(script_name, ver_no):
     """
     Generates a Blender Python script to batch-import multiple GLB files
     and sequence them in the timeline (One frame per file).
     """
 
     current_path = os.getcwd()
-
-    script_path = f"{base_name}_animate.py"
     
-    blender_script = f"""# created with MolAlign {ver_no} by (C) 2026 Dr. Tobias Schulz
-import bpy
-import os
+    script_path = os.path.join(current_path, script_name)
+    clean_folder = current_path.replace('\\', '/')
+    
+    blender_script = f"""# created with MolAlign {ver_no} (C) 2026 by  Dr. Tobias Schulz
+# ==============================================================================
+# USER GUIDE for MolVista Blender Animation
+# ==============================================================================
+# A) Run This Script in Blender
+# 1. GLOBAL VISUAL CONTROL: 
+#    This script links all imported meshes to "MASTER" materials in your template.
+#    Edit these materials in the 'Material Properties' tab to update ALL frames:
+#    - 'MASTER_Molecule'  -> Controls atoms and bonds (mol_***)
+#
+# 2. RETAINING COLORS (CPK):
+#    'MASTER_Molecule' use 'Vertex Colors' (Color Attributes).
+#    In the Shader Editor, ensure a 'Color Attribute' node is connected to the 
+#    'Base Color' and 'Emission Color' of the Principled BSDF.
+#
+# 3. POSITIONING:
+#    Select the 'TRAJECTORY_CONTROL' (Empty) to move, rotate, or scale the 
+#    entire animation sequence simultaneously over your scene.
+# 
+# B) CLEANUP: Search 'Camera Node' and other empty objects in Outliner -> Select all (A) 
+#    -> Right Click -> 'Delete Hierarchy'. This removes Cameras but keeps Meshes.
+# ==============================================================================
+ 
+import bpy, os, re
 
-# --- Settings ---
-path_to_glb = "{current_path}" # adapt path to *glb files!
+path_to_glb = "{clean_folder}"
 extension = ".glb"
 
-# 1. Empty current Scene (recommended)
-bpy.ops.object.select_all(action='SELECT')
-bpy.ops.object.delete()
+# 1. Initial Cleanup - Protects "MASTER" oder "DUMMY" etc.
+protected_keywords = ["Camera", "Plane", "Cylinder", "Sun", "World", "TRAJECTORY_CONTROL", "MASTER", "DUMMY"]
 
-# Find and sort all Files
+# Collect elements to delete
+to_delete = []
+for obj in bpy.data.objects:
+    is_protected = any(p.upper() in obj.name.upper() for p in protected_keywords)
+    if not is_protected:
+        to_delete.append(obj)
+
+for obj in to_delete:
+    try:
+        bpy.data.objects.remove(obj, do_unlink=True)
+    except:
+        pass
+
+# 2. Controller Setup
+if "TRAJECTORY_CONTROL" not in bpy.data.objects:
+    cntrl = bpy.data.objects.new("TRAJECTORY_CONTROL", None)
+    bpy.context.scene.collection.objects.link(cntrl)
+else:
+    cntrl = bpy.data.objects["TRAJECTORY_CONTROL"]
+
+# 3. File Discovery
 files = sorted([f for f in os.listdir(path_to_glb) if f.endswith(extension)])
 
+# 4. Import Loop
 for i, filename in enumerate(files):
     filepath = os.path.join(path_to_glb, filename)
-    
-    # 2. IMPORT (imported objects are automatically selected)
     bpy.ops.import_scene.gltf(filepath=filepath)
-    imported_objs = bpy.context.selected_objects
     
-    current_frame = i + 1 # Blender starts with Frame 1
+    new_objs = [o for o in bpy.context.selected_objects if o.type == 'MESH']
+    current_frame = i + 1 
 
-    for obj in imported_objs:
-        # --- Set KEYFRAMES ---
-        
-        # A) Predecessor Frame: invisible
-        if current_frame > 1:
-            obj.hide_viewport = True
-            obj.hide_render = True
-            obj.keyframe_insert(data_path="hide_viewport", frame=current_frame - 1)
-            obj.keyframe_insert(data_path="hide_render", frame=current_frame - 1)
-        
-        # B) Current Frame: visible
-        obj.hide_viewport = False
-        obj.hide_render = False
-        obj.keyframe_insert(data_path="hide_viewport", frame=current_frame)
-        obj.keyframe_insert(data_path="hide_render", frame=current_frame)
-        
-        # C) Successor Frame: invisible
-        obj.hide_viewport = True
-        obj.hide_render = True
-        obj.keyframe_insert(data_path="hide_viewport", frame=current_frame + 1)
-        obj.keyframe_insert(data_path="hide_render", frame=current_frame + 1)
+    for obj in new_objs:
+        # --- POSITIONING ---
+        old_matrix = obj.matrix_world.copy()
+        obj.parent = cntrl
+        obj.matrix_world = old_matrix
 
-# Adapt Timeline
+        # --- MASTER MATERIAL LINK ---
+        # Wir suchen das Master-Material
+        mat = bpy.data.materials.get("MASTER_Molecule")
+        if mat:
+            obj.data.materials.clear()
+            obj.data.materials.append(mat)
+            obj.color = mat.diffuse_color
+
+        # --- ANIMATION (Visibility via Scale) ---
+        obj.scale = (0, 0, 0)
+        obj.keyframe_insert(data_path="scale", frame=current_frame - 1)
+        
+        # Show Geometry
+        obj.scale = (1, 1, 1) if len(obj.data.vertices) > 1 else (0, 0, 0)
+        obj.keyframe_insert(data_path="scale", frame=current_frame)
+        
+        obj.scale = (0, 0, 0)
+        obj.keyframe_insert(data_path="scale", frame=current_frame + 1)
+        
+        # Constant Interpolation
+        if obj.animation_data and obj.animation_data.action:
+            action = obj.animation_data.action
+            if hasattr(action, "fcurves"):
+                for fc in action.fcurves:
+                    for kp in fc.keyframe_points:
+                        kp.interpolation = 'CONSTANT'
+    
+    # Cleanup leere Nodes aus dem GLTF Import (Nodes/Empties)
+    for o in bpy.context.selected_objects:
+        if o.type != 'MESH':
+            # Nur löschen, wenn es nicht unser geschützter Controller ist
+            if not any(p.upper() in o.name.upper() for p in protected_keywords):
+                bpy.data.objects.remove(o, do_unlink=True)
+
+# 5. Final Scene Sync
+bpy.context.scene.frame_start = 1
 bpy.context.scene.frame_end = len(files)
-print(f"Finished! {{len(files)}} Frames processed.")
+bpy.context.scene.frame_set(1)
+print(f"Sync complete. Master-Dummies preserved. {{len(files)}} frames processed.")
 """
     with open(script_path, "w") as f:
         f.write(blender_script)
 
-def on_export_finished(success, base_name):
-        log = []
+def on_export_finished(success, script_name):
         if success:
-            generate_blender_script_multi(base_name, ver_no)
+            generate_blender_script_multi(script_name, ver_no)
             print(f"Blender multi file export done")
         else:
             print(f"Export cancelled", "warning")
-        return log
 
 pbar = None
 def update_progress(val):
@@ -1014,14 +1114,15 @@ def update_progress(val):
 class OneFileExportWorker(QThread): # One File
     finished = Signal(bool, str) # Variables: Success, Path
 
-    def __init__(self, data, path, name, cpk, radii, def_rad):
+    def __init__(self, data, base_name, name, cpk, radii, def_rad, script_name):
         super().__init__()
         self.data = data
-        self.path = path
+        self.base_name = base_name
         self.name = name
         self.cpk = cpk
         self.radii = radii
         self.def_rad = def_rad
+        self.script_name = script_name
 
     def run(self):
         try:
@@ -1038,81 +1139,112 @@ class OneFileExportWorker(QThread): # One File
                 # Generate a unique name for the Blender script
                 pl.add_mesh(mesh, name=f"{self.name}_{i:03d}", scalars="RGB", rgb=True)
                 
-            pl.export_gltf(f"{self.path}_one.glb")
+            pl.export_gltf(f"{self.base_name}.glb")
             pl.close()
-            self.finished.emit(True, self.path)
+            self.finished.emit(True, self.script_name)
         except Exception as e:
-            self.finished.emit(False, "")
+            self.finished.emit(False, self.script_name)
 
-def on_one_file_finished(success, path):
+def on_one_file_finished(success, s_name):
     if success:
-        generate_blender_script(path, ver_no) 
-        print(f"Success: GLB export and script created for {os.path.basename(path)}")
+        generate_blender_script_one(s_name, ver_no) 
+        print(f"Success: Blender One File Export finished")
     else:
         print("Error: GLB export failed.")
 
-def generate_blender_script(path, ver_no):
-    """
-    Generates a companion Blender Python script for the exported GLB file.
-    This script sets up a frame-by-frame animation by toggling object visibility.
-    """
-    script_path = f"{path}_one_file.py"
+def generate_blender_script_one(script_name, ver_no):
         
-    blender_script = f"""import bpy
-# created with MolAlign {ver_no} (C)2026 Dr. Tobias Schulz
-# 1. Identify all objects starting with "mol_" (representing trajectory frames)
-steps = [obj for obj in bpy.data.objects if "mol_" in obj.name]
-steps.sort(key=lambda x: x.name)
+    current_path = os.getcwd()
+    script_path = os.path.join(current_path, script_name)
 
-if not steps:
-    print("Error: No 'mol_' objects found in the scene!")
+    blender_script = f"""# created with MolAlign {ver_no} (C) 2026 by Dr. Tobias Schulz
+# ==============================================================================
+# USER GUIDE for MolVista Blender Animation
+# ==============================================================================
+# A) Run This Script in Blender
+# 1. GLOBAL VISUAL CONTROL: 
+#    This script links all imported meshes to "MASTER" materials in your template.
+#    Edit these materials in the 'Material Properties' tab to update ALL frames:
+#    - 'MASTER_Molecule'  -> Controls atoms and bonds (mol_***)
+#
+# 2. RETAINING COLORS (CPK):
+#    'MASTER_Molecule' use 'Vertex Colors' (Color Attributes).
+#    In the Shader Editor, ensure a 'Color Attribute' node is connected to the 
+#    'Base Color' and 'Emission Color' of the Principled BSDF.
+#
+# 3. POSITIONING:
+#    Select the 'TRAJECTORY_CONTROL' (Empty) to move, rotate, or scale the 
+#    entire animation sequence simultaneously over your scene.
+# ==============================================================================
+ 
+import bpy, re, os
+
+# --- Helper: Natural Sort ---
+def natural_key(text):
+    return [int(c) if c.isdigit() else c.lower() for c in re.split('(\\\\d+)', text)]
+
+# 1. Protection & Controller Setup
+protected_keywords = ["Camera", "Plane", "Cylinder", "Sun", "World", "TRAJECTORY_CONTROL", "MASTER", "DUMMY"]
+
+if "TRAJECTORY_CONTROL" not in bpy.data.objects:
+    cntrl = bpy.data.objects.new("TRAJECTORY_CONTROL", None)
+    bpy.context.collection.objects.link(cntrl)
+    cntrl.empty_display_type = 'ARROWS'
 else:
-    # 2. Detach objects from any hierarchies (Unparent)
-    # This ensures each frame can be transformed independently if needed
-    bpy.ops.object.select_all(action='DESELECT')
-    for obj in steps:
-        obj.select_set(True)
-    
-    # Clear parents while maintaining the current world transformation
-    bpy.ops.object.parent_clear(type='CLEAR_KEEP_TRANSFORM')
-    bpy.ops.object.select_all(action='DESELECT')
+    cntrl = bpy.data.objects["TRAJECTORY_CONTROL"]
 
-    # 3. Setup Scene Timeline
-    bpy.context.scene.frame_start = 1
-    bpy.context.scene.frame_end = len(steps)
-    
-    # 4. Create Frame-by-Frame Visibility Animation
-    for i, obj in enumerate(steps):
-        if obj.animation_data:
-            obj.animation_data_clear()
-            
-        target_frame = i + 1
-        
-        # Initial State: Hidden (Scale set to 0)
+# 2. THE DUMMY KILLER: Hide all template dummies from the start
+for obj in bpy.data.objects:
+    if "DUMMY" in obj.name.upper():
         obj.scale = (0, 0, 0)
-        obj.keyframe_insert(data_path="scale", frame=0)
-        
-        # Visible State: Active only at its specific frame
-        obj.scale = (1, 1, 1)
-        obj.keyframe_insert(data_path="scale", frame=target_frame)
-        
-        # Hide immediately after its frame
-        obj.scale = (0, 0, 0)
-        obj.keyframe_insert(data_path="scale", frame=target_frame + 1)
+        obj.hide_render = True
 
-        # Force CONSTANT interpolation to prevent smooth scaling effects
-        if obj.animation_data and obj.animation_data.action:
-            for fcurve in obj.animation_data.action.fcurves:
-                for kp in fcurve.keyframe_points:
+# 3. Collect and Sort all imported Meshes
+all_meshes = [o for o in bpy.data.objects if o.type == 'MESH' and not any(p.upper() in o.name.upper() for p in protected_keywords)]
+all_meshes.sort(key=lambda o: natural_key(o.name))
+
+# 4. Master Material Link & Animation
+master_mat = bpy.data.materials.get("MASTER_Molecule")
+
+for i, obj in enumerate(all_meshes):
+    target_frame = i + 1 
+    
+    # Parenting & Transform-Fix
+    obj.parent = cntrl
+    obj.matrix_parent_inverse = cntrl.matrix_world.inverted()
+    
+    if master_mat:
+        obj.data.materials.clear()
+        obj.data.materials.append(master_mat)
+
+    # --- Animation (Visibility via Scale) ---
+    obj.scale = (0, 0, 0)
+    obj.keyframe_insert(data_path="scale", frame=target_frame - 1)
+    
+    # Show Geometry
+    obj.scale = (1, 1, 1) if len(obj.data.vertices) > 0 else (0, 0, 0)
+    obj.keyframe_insert(data_path="scale", frame=target_frame)
+    
+    obj.scale = (0, 0, 0)
+    obj.keyframe_insert(data_path="scale", frame=target_frame + 1)
+    
+    # Constant interpolation
+    if obj.animation_data and obj.animation_data.action:
+        act = obj.animation_data.action
+        if hasattr(act, "fcurves"):
+            for fc in act.fcurves:
+                for kp in fc.keyframe_points:
                     kp.interpolation = 'CONSTANT'
 
+# 5. Scene Finalize
+if all_meshes:
+    bpy.context.scene.frame_end = len(all_meshes)
     bpy.context.scene.frame_set(1)
-    print(f"Animation Setup Complete: {{len(steps)}} frames sequenced.")
+    print(f"One-File Sync complete: {{len(all_meshes)}} Frames ready. Dummies hidden.")
 """
-
     with open(script_path, "w") as f:
         f.write(blender_script)
-      
+  
 ### LOG File ###
 def write_batch_log(output_path, log_entries):
     log_name = os.path.splitext(output_path)[0] + ".log"
@@ -1177,7 +1309,7 @@ cov_radii = {
 default_radius = 1.0
 
 # Version:
-ver_no = 1.2
+ver_no = 1.3
 
 @click.command(context_settings=dict(ignore_unknown_options=True))
 @click.argument('files', nargs=-1) # 'e.g. file1.xyz file2.xyz ...'
@@ -1188,8 +1320,8 @@ ver_no = 1.2
 @click.option('--xyz', is_flag=True, help='Export combined .xyz trajectory')
 @click.option('--log', is_flag=True, help='Provide log File')
 
-@click.option('--obj_name', '-n', default='molecule',
-              help='object name, default "molecule" ') 
+@click.option('--obj_name', '-n', default='mol',
+              help='object name, default "mol" (POV-Ray only)') 
 @click.option('--fname', '-f', default='output',
               help='output file name or base name') 
 @click.option('--split', default='none', type=click.Choice(['none','orca', 'nw', 'psi4']), 
@@ -1198,7 +1330,12 @@ ver_no = 1.2
 @click.option('--rev', '-r', multiple=True, type=int, default=None,
               help='Indices of files to reverse, e.g. -r 0 -r 2 will reverse first and third file')
 
-def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
+@click.option('--bridge', '-b', type=int, default=10,
+              help='No. of bridging points (default 10) added for smooth transition if RMSD exceeds the threshold')
+@click.option('--threshold', '-t', type=float, default=0.2,
+              help='RMSD threshold for adding bridging points (default 0.2).')
+
+def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split, bridge, threshold):
     # Data Import
     all_datasets = []
     log_data = []
@@ -1226,7 +1363,7 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
             combined_data = all_datasets[0]
             # No alignment/mapping needed, jump straight to export
     else:  # multiple inputs
-        combined_data, alignment_rmsds, log_ = chain_alignment(all_datasets)
+        combined_data, alignment_rmsds, log_ = chain_alignment(all_datasets, bridge, threshold)
         log_data.append("Alignment:")
         log_data.extend(log_)
 
@@ -1284,6 +1421,8 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
         app = QCoreApplication.instance() or QCoreApplication([])
 
         base_name = fname
+        obj_prefix = obj_name # object designation inside Blender, mol_001, ...
+        script_name = "import_and_animate.py" # Import Script for Blender
 
         raw_points = [np.array(p) for p in combined_data.atom_points]
         raw_types = list(combined_data.atom_types)
@@ -1294,21 +1433,21 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
         # 2. Create the list of tasks for EVERY frame
         # This is the list the executor will iterate over later
         tasks = [
-            (i, raw_points[i], raw_types[i], pure_cpk, pure_radii, def_rad, base_name)
+            (i, raw_points[i], raw_types[i], pure_cpk, pure_radii, def_rad, base_name, obj_prefix)
             for i in range(len(raw_points))
         ]
 
-        click.echo("Bld Export startet... ")
+        click.echo("Bld Export started... ")
         #initialize tqdm
         pbar = tqdm(total=100, desc="Exporting Blender Frames", unit="%")
     
-        worker = ExportWorker(tasks, base_name)
+        worker = ExportWorker(tasks, base_name, obj_prefix, script_name)
         worker.progress.connect(update_progress)
 
         # local Event-Loop, wait for 'finished' 
         loop = QEventLoop()
-        worker.finished.connect(lambda success, b: [
-            on_export_finished(success, b), 
+        worker.finished.connect(lambda success, script_name: [
+            on_export_finished(success, script_name), 
             loop.quit(),
             pbar.close()
         ])
@@ -1317,19 +1456,23 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
         worker.start()
         loop.exec() # block until finished!
 
-        log_data.append(f"Blender multi file export done to {fname}_*.glb")
-        log_data.append(f"Configure Script {fname}_animate.py created ")
+        log_data.append(f"Blender multi file export done, files written to {fname}_*.glb")
+        log_data.append(f"Blender Import and Animate Script written to {script_name}")
 
     if bld_one:
-        click.echo("Bld One File Export startet... ")
+        click.echo("Bld One File Export started... ")
         app = QCoreApplication.instance() or QCoreApplication([])
 
-        one_worker = OneFileExportWorker(combined_data, fname, obj_name, cpk_colors,
-                cov_radii, default_radius)
+        base_name = fname
+        obj_prefix = obj_name # object designation inside Blender, mol_001, ...
+        script_name = "import_and_animate.py" # Import Script for Blender
+
+        one_worker = OneFileExportWorker(combined_data, base_name, obj_name, cpk_colors,
+                cov_radii, default_radius, script_name)
         
         loop = QEventLoop()
-        one_worker.finished.connect(lambda success, path: [
-            on_one_file_finished(success, path), 
+        one_worker.finished.connect(lambda success, script_name: [
+            on_one_file_finished(success, script_name), 
             loop.quit()
         ])
         
@@ -1337,7 +1480,8 @@ def main(files, pov, bld, bld_one, xyz, log, obj_name, fname, rev, split):
         one_worker.start()
         loop.exec() # block until finished!
 
-        log_data.append(f"Blender One File export complete, {os.path.basename(fname)}.glb")
+        log_data.append(f"Blender One File export complete, {os.path.basename(base_name)}.glb")
+        log_data.append(f"Blender Import and Animate Script written to {script_name}")
 
     if log:
         write_batch_log(f"{fname}.log", log_data)
