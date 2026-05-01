@@ -65,15 +65,6 @@ During execution, MolAlign provides real-time feedback:
 
 Troubleshooting: Blender Integration
 If you are using the Blender export scripts:
-    1. Import: In Blender, import the .glb file(s).
-       OneFile Mode (--bld-one) produces one file containing meshes for all time frames
-       MultiFile Mode (--bld) produces one .glb file for each point
-    2. Scripting: Switch to the Scripting Tab in Blender.
-    3. Open & Run: Open the generated .py script (e.g., import_and_animate.py) and click Run Script.
-    4. Result: Your reaction path is now fully sequenced on the Blender timeline.
-    5. Customization: use 'Dummy_mol' to modify appearance (e.g. "Metallic") and 'trajectory_Control' to
-       adjust position and scale
-
     1.Import: Import the generated .glb file(s) into Blender.
     OneFile Mode (--bld-one): Produces a single file containing meshes for all time frames.
     MultiFile Mode (--bld): Produces individual .glb files for each trajectory point.
